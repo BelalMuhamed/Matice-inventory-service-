@@ -1,0 +1,66 @@
+[
+  {
+    "ContainingType": "invetoryBackGroundServices.Controllers.MachineController",
+    "Method": "EjectCard",
+    "RelativePath": "api/Machine/Eject-card",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Dto",
+        "Type": "invetoryBackGroundServices.Params.EjectCardReq",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "invetoryBackGroundServices.Controllers.MachineController",
+    "Method": "GetMachineInfo",
+    "RelativePath": "api/Machine/get-machine-info",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "PrintRequest",
+        "Type": "invetoryBackGroundServices.Params.GetMachineInfoReques",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "invetoryBackGroundServices.Controllers.MachineController",
+    "Method": "Print",
+    "RelativePath": "api/Machine/Print-Card-Holder-Name",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "invetoryBackGroundServices.Params.PrintReqDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "invetoryBackGroundServices.Controllers.MachineController",
+    "Method": "ResetMachine",
+    "RelativePath": "api/Machine/reset-machine",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "PrintRequest",
+        "Type": "invetoryBackGroundServices.Params.GetMachineInfoReques",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  }
+]

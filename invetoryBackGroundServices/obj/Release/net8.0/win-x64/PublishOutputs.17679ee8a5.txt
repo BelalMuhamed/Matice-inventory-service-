@@ -1,0 +1,5 @@
+C:\Users\b.zakaria\Desktop\AUBInvetory\InvetoryServices\invetoryBackGroundServices\publish\appsettings.Development.json
+C:\Users\b.zakaria\Desktop\AUBInvetory\InvetoryServices\invetoryBackGroundServices\publish\appsettings.json
+C:\Users\b.zakaria\Desktop\AUBInvetory\InvetoryServices\invetoryBackGroundServices\publish\invetoryBackGroundServices.pdb
+C:\Users\b.zakaria\Desktop\AUBInvetory\InvetoryServices\invetoryBackGroundServices\publish\aspnetcorev2_inprocess.dll
+C:\Users\b.zakaria\Desktop\AUBInvetory\InvetoryServices\invetoryBackGroundServices\publish\invetoryBackGroundServices.exe
