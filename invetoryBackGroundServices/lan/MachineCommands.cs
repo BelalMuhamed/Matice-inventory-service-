@@ -1,5 +1,4 @@
 ﻿
-using Nancy.Json;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System;
@@ -112,29 +111,23 @@ namespace MATICA_S3300e.LAN
 
                         if (httpAction.sAction != "echo")
                         {
-                            bool CheckParser = false;
-                            int count = 0;
-
-                            #region GetInfo Parsing
-                            do
+                            // Matica Print Flow, status-parsing fix: this used to call
+                            // `Parser.GetInfoParsing(sMessage, ref _machineinfo)`, commented out
+                            // and left dead - no `Parser` class exists anywhere in this codebase
+                            // (confirmed by repeated search), so the retry loop that wrapped it
+                            // never actually parsed anything and never actually failed either.
+                            // Replaced with real structured deserialization into MachineInfoJSON
+                            // (see CardDataBean.cs's [JsonProperty] additions) instead of leaving
+                            // sMessage as raw text for the caller to string-match against.
+                            try
                             {
-                                try
-                                {
-                                    //Parser.GetInfoParsing(sMessage, ref _machineinfo); //data parsing
-                                }
-                                catch (Exception)
-                                {
-                                    CheckParser = true;
-                                    _log.AppendLog("GetInfo parsing failed!", Logger.LogType.Error);
-                                }
-
-                                count++;
-
-                            } while (CheckParser == true && count < 3);
-
-                            if (CheckParser == true) return -1;
-
-                            #endregion
+                                _machineinfo = JsonConvert.DeserializeObject<MachineInfoJSON>(sMessage);
+                            }
+                            catch (JsonException)
+                            {
+                                _log.AppendLog("GetInfo parsing failed!", Logger.LogType.Error);
+                                return -1;
+                            }
                         }
 
                         #endregion
@@ -614,7 +607,12 @@ namespace MATICA_S3300e.LAN
 
                 AnswerClass JsonAnswer = new AnswerClass();
 
-                JsonAnswer = new JavaScriptSerializer().Deserialize<AnswerClass>(Answer); //deserialize the response into an obj (AnswerClass)
+                // Matica Print Flow, dead-code pass: was Nancy.Json's JavaScriptSerializer, the
+                // last real use of the Nancy package in this codebase. JsonConvert is already used
+                // for every outbound serialization in this same file; AnswerClass's plain
+                // PascalCase properties (Answer/Data/Error) match Newtonsoft's default
+                // case-insensitive matching identically, so this is a behavior-preserving swap.
+                JsonAnswer = JsonConvert.DeserializeObject<AnswerClass>(Answer);
 
                 _log.AppendLog("Response << " + Answer, Logger.LogType.Info);
 

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\b.zakaria\\Desktop\\AUBInvetory\\InvetoryServices\\invetoryBackGroundServices\\invetoryBackGroundServices\\invetoryBackGroundServices.csproj": {}
+    "C:\\Users\\b.zakaria\\Desktop\\Inventory For MDP\\InvetoryServices\\invetoryBackGroundServices\\invetoryBackGroundServices\\invetoryBackGroundServices.csproj": {}
   },
   "projects": {
-    "C:\\Users\\b.zakaria\\Desktop\\AUBInvetory\\InvetoryServices\\invetoryBackGroundServices\\invetoryBackGroundServices\\invetoryBackGroundServices.csproj": {
+    "C:\\Users\\b.zakaria\\Desktop\\Inventory For MDP\\InvetoryServices\\invetoryBackGroundServices\\invetoryBackGroundServices\\invetoryBackGroundServices.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\b.zakaria\\Desktop\\AUBInvetory\\InvetoryServices\\invetoryBackGroundServices\\invetoryBackGroundServices\\invetoryBackGroundServices.csproj",
+        "projectUniqueName": "C:\\Users\\b.zakaria\\Desktop\\Inventory For MDP\\InvetoryServices\\invetoryBackGroundServices\\invetoryBackGroundServices\\invetoryBackGroundServices.csproj",
         "projectName": "invetoryBackGroundServices",
-        "projectPath": "C:\\Users\\b.zakaria\\Desktop\\AUBInvetory\\InvetoryServices\\invetoryBackGroundServices\\invetoryBackGroundServices\\invetoryBackGroundServices.csproj",
+        "projectPath": "C:\\Users\\b.zakaria\\Desktop\\Inventory For MDP\\InvetoryServices\\invetoryBackGroundServices\\invetoryBackGroundServices\\invetoryBackGroundServices.csproj",
         "packagesPath": "C:\\Users\\b.zakaria\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\b.zakaria\\Desktop\\AUBInvetory\\InvetoryServices\\invetoryBackGroundServices\\invetoryBackGroundServices\\obj\\",
+        "outputPath": "C:\\Users\\b.zakaria\\Desktop\\Inventory For MDP\\InvetoryServices\\invetoryBackGroundServices\\invetoryBackGroundServices\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -51,13 +51,13 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[8.0.27, )"
+            },
             "Microsoft.Extensions.Hosting.WindowsServices": {
               "target": "Package",
               "version": "[9.0.5, )"
-            },
-            "Nancy": {
-              "target": "Package",
-              "version": "[2.0.0, )"
             },
             "Newtonsoft.Json": {
               "target": "Package",

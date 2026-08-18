@@ -1,7 +1,6 @@
 ﻿using MATICA_S3300e.CLS;
 using MATICA_S3300e.LAN;
 using Microsoft.Extensions.Configuration;
-using Nancy;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;

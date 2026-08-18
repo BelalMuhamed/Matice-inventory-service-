@@ -1,4 +1,6 @@
-﻿using System;
+﻿using MATICA_S3300e.CLS;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -220,161 +222,94 @@ namespace MATICA_S3300e.LAN
 
         #endregion
     }
+    public class MachineResponse
+    {
+        [JsonProperty("Answer")]
+        public string Answer { get; set; }
+
+        [JsonProperty("Machine_Configuration")]
+        public MachineConfiguration MachineConfiguration { get; set; }
+
+        [JsonProperty("Machine_Status")]
+        public MachineInfoJSON MachineStatus { get; set; }
+    }
+    public class MachineConfiguration
+    {
+        [JsonProperty("machine_model")]
+        public string MachineModel { get; set; }
+
+        [JsonProperty("machine_name")]
+        public string MachineName { get; set; }
+
+        [JsonProperty("machine_sn")]
+        public string MachineSN { get; set; }
+
+        [JsonProperty("number_of_feeders")]
+        public string NumberOfFeeders { get; set; }
+
+        [JsonProperty("card_exit")]
+        public string CardExit { get; set; }
+
+        [JsonProperty("card_reject")]
+        public string CardReject { get; set; }
+
+        [JsonProperty("card_counter")]
+        public string CardCounter { get; set; }
+    }
     public class MachineInfoJSON
     {
-        #region Declarations
-        private string _machinestatus;
-        private string _errorvalue;
-        private string _errorinfo;
-        private string _cardinside;
-        private string _coveropen;
-        private List<string> _feeder;
-        private int _cardcounter;
-        private string _tipperstatus;
-        private int _tippertemperature;
-        private string _tippernearend;
-        private string _frontinfillernearend;
-        private string _rearinfillernearend;
-        private string _machinesn;
-        private string _embosserversion;
-        #endregion
+        [JsonProperty("machine_status")]
+        public string machineStatus { get; set; }
 
-        #region Properties
-        public string MachineStatus
-        {
-            get { return _machinestatus; }
-            set { _machinestatus = value; }
-        }
+        [JsonProperty("card_inside")]
+        public string CardInside { get; set; }
 
-        public string ErrorValue
-        {
-            get { return _errorvalue; }
-            set { _errorvalue = value; }
-        }
-        public string ErrorInfo
-        {
-            get { return _errorinfo; }
-            set { _errorinfo = value; }
-        }
-        public string CardInside
-        {
-            get { return _cardinside; }
-            set { _cardinside = value; }
-        }
-        public string CoverOpen
-        {
-            get { return _coveropen; }
-            set { _coveropen = value; }
-        }
-        public List<string> Feeder
-        {
-            get { return _feeder; }
-            set { _feeder = value; }
-        }
-        public int CardCounter
-        {
-            get { return _cardcounter; }
-            set { _cardcounter = value; }
-        }
-        public string TipperStatus
-        {
-            get { return _tipperstatus; }
-            set { _tipperstatus = value; }
-        }
-        public int TipperTemperature
-        {
-            get { return _tippertemperature; }
-            set { _tippertemperature = value; }
-        }
-        public string TipperNearEnd
-        {
-            get { return _tippernearend; }
-            set { _tippernearend = value; }
-        }
-        public string FrontInFillerNearEnd
-        {
-            get { return _frontinfillernearend; }
-            set { _frontinfillernearend = value; }
-        }
-        public string RearInFillerNearEnd
-        {
-            get { return _rearinfillernearend; }
-            set { _rearinfillernearend = value; }
-        }
-        public string MachineSN
-        {
-            get { return _machinesn; }
-            set { _machinesn = value; }
-        }
-        public string EmbosserVersion
-        {
-            get { return _embosserversion; }
-            set { _embosserversion = value; }
-        }
-        #endregion
+        [JsonProperty("cover_open")]
+        public string CoverOpen { get; set; }
 
-        #region Constructors
-        public MachineInfoJSON()
-        {
-            _machinestatus = string.Empty;
+        [JsonProperty("error_message")]
+        public string ErrorMessage { get; set; }
 
-            _errorinfo = string.Empty;
-            _errorvalue = string.Empty;
+        [JsonProperty("feeder_0_card_presence")]
+        public string Feeder0CardPresence { get; set; }
 
-            _cardinside = string.Empty;
-            _coveropen = string.Empty;
+        [JsonProperty("feeder_1_card_presence")]
+        public string Feeder1CardPresence { get; set; }
 
-            if (_feeder != null)
-                _feeder.Clear();
-            else
-                _feeder = new List<string>();
+        [JsonProperty("tipper_status")]
+        public string TipperStatus { get; set; }
 
-            _cardcounter = 0;
+        [JsonProperty("tipper_temperature")]
+        public string TipperTemperature { get; set; }
 
-            _tipperstatus = string.Empty;
-            _tippertemperature = 0;
+        [JsonProperty("tipper_near_end")]
+        public string TipperNearEnd { get; set; }
 
-            _tippernearend = string.Empty;
-            _frontinfillernearend = string.Empty;
-            _rearinfillernearend = string.Empty;
+        [JsonProperty("tipper_end_ribbon")]
+        public string TipperEndRibbon { get; set; }
 
-            _machinesn = string.Empty;
-            _embosserversion = string.Empty;
-        }
-        #endregion
+        [JsonProperty("rear_infiller_near_end")]
+        public string RearInfillerNearEnd { get; set; }
 
-        #region Methods
-        /// <summary>
-        /// To Print the data structure
-        /// </summary>
-        /// <returns></returns>
-        public string MachineInfoTextJSON()
-        {
-            StringBuilder sb = new StringBuilder();
+        [JsonProperty("rear_infiller_end_ribbon")]
+        public string RearInfillerEndRibbon { get; set; }
 
-            sb.AppendLine("MACHINE INFO :");
+        [JsonProperty("top_infiller_near_end")]
+        public string TopInfillerNearEnd { get; set; }
 
-            sb.AppendLine("Machine Status: " + _machinestatus);
-            sb.AppendLine("Card Inside: " + _cardinside);
-            sb.AppendLine("Cover Open: " + _coveropen);
-
-            if (Feeder != null)
-                for (int i = 0; i < _feeder.Count(); i++)
-                    sb.AppendLine("Feeder " + i + ": " + _feeder[i]);
-
-            sb.AppendLine("Card Counter: " + _cardcounter);
-            sb.AppendLine("Tipper Status: " + _tipperstatus + ", Tipper Temperature: " + TipperTemperature);
-            sb.AppendLine("Tipper NearEnd: " + _tippernearend);
-            sb.AppendLine("FrontInfiller NearEnd: " + _frontinfillernearend);
-            sb.AppendLine("RearInfiller NearEnd: " + _rearinfillernearend);
-
-            sb.AppendLine("Machine SN: " + _machinesn);
-            sb.AppendLine("Embosser Version: " + _embosserversion);
-
-            return sb.ToString();
-        }
-        #endregion
+        [JsonProperty("top_infiller_end_ribbon")]
+        public string TopInfillerEndRibbon { get; set; }
     }
+    /// <summary>
+    /// Deserialization target for the machine's <c>GetInfoJson</c> response (Matica Print Flow,
+    /// status-parsing fix). <c>machine_status</c>, <c>card_inside</c>, and <c>tipper_status</c> are
+    /// <b>confirmed</b> wire field names — they're the exact strings the pre-fix code checked with
+    /// <c>string.Contains(...)</c>. Every other <c>[JsonProperty]</c> name below is a best-guess
+    /// snake_case conversion following that same pattern, <b>not independently confirmed against a
+    /// real device response</b> — verify these against an actual capture before relying on them for
+    /// anything beyond the three confirmed fields (see the Matica patch notes).
+    /// </summary>
+   
     public class MachineConnectionClass
     {
         #region Declarations

@@ -11,10 +11,11 @@
 using System;
 using System.Reflection;
 
+[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsIdAttribute("992845dd-fc8c-46e5-80cb-e9d20d95a1fe")]
 [assembly: System.Reflection.AssemblyCompanyAttribute("invetoryBackGroundServices")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7e0f26590ba45cb848495f153d5c753f5c6497b6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0fb28523ce1374b3e6b1d7b27ac301897492295c")]
 [assembly: System.Reflection.AssemblyProductAttribute("invetoryBackGroundServices")]
 [assembly: System.Reflection.AssemblyTitleAttribute("invetoryBackGroundServices")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

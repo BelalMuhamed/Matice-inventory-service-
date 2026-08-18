@@ -166,12 +166,17 @@
       },
       "PrintReqDto": {
         "required": [
-          "branchName",
+          "branchId",
           "cardHolderName",
+          "cpi",
+          "feederId",
+          "font",
+          "hopperId",
           "machineIp",
-          "productName",
-          "token",
-          "userName"
+          "offsetX",
+          "offsetY",
+          "port",
+          "productId"
         ],
         "type": "object",
         "properties": {
@@ -179,27 +184,47 @@
             "type": "string",
             "nullable": true
           },
-          "machineIp": {
-            "type": "string",
-            "nullable": true
-          },
           "userName": {
             "type": "string",
             "nullable": true
           },
-          "productName": {
+          "machineIp": {
             "type": "string",
             "nullable": true
           },
-          "token": {
+          "port": {
             "type": "string",
             "nullable": true
           },
-          "branchName": {
-            "type": "string",
-            "nullable": true
+          "feederId": {
+            "type": "integer",
+            "format": "int32"
           },
-          "printedFace": {
+          "hopperId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "branchId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "font": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "cpi": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offsetX": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offsetY": {
             "type": "integer",
             "format": "int32"
           }

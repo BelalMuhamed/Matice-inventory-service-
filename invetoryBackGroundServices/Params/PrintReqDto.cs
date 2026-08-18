@@ -1,13 +1,34 @@
 ﻿namespace invetoryBackGroundServices.Params
 {
+    /// <summary>
+    /// Matica Print Flow: redesigned from the original shape. <c>token</c> is gone - the caller's
+    /// credential is now the Print Agent token in the standard <c>Authorization</c> header,
+    /// validated by <c>[Authorize]</c> before this ever reaches the controller. <c>productName</c>/
+    /// <c>branchName</c> are replaced with <see cref="ProductId"/>/<see cref="BranchId"/> (longs) -
+    /// Angular already knows these as ids from its own product/branch browsing elsewhere, and the
+    /// Inventory API's own name filters are substring matches, not exact, so ids avoid an
+    /// ambiguity this flow doesn't need to accept. <c>printedFace</c> is gone entirely - Matica
+    /// print configuration has no per-face concept (confirmed against the Inventory API's own
+    /// domain model: only the Evolis print-config DTO has a PrintedFace field), so it was never
+    /// meaningful here and introducing it now would only manufacture a parity this device doesn't
+    /// have. Print-layout fields (<see cref="Font"/>/<see cref="Cpi"/>/<see cref="OffsetX"/>/
+    /// <see cref="OffsetY"/>) are supplied directly instead of being looked up by this service -
+    /// Angular already fetches them from the Inventory API's own
+    /// <c>GET /api/products/{id}/print-config</c> as part of normal product browsing.
+    /// </summary>
     public class PrintReqDto
     {
-        public required string cardHolderName { get; set; }
-        public required string machineIp { get; set; }
-        public required string userName { get; set; }
-        public required string productName { get; set; }
-        public required string token { get; set; }
-        public required string branchName { get; set; }
-        public int printedFace { get; set; } = 0;
+        public required string CardHolderName { get; set; }
+        public string? UserName { get; set; }
+        public required string MachineIp { get; set; }
+        public required string Port { get; set; }
+        public required int FeederId { get; set; }
+        public required int HopperId { get; set; }
+        public required long ProductId { get; set; }
+        public required long BranchId { get; set; }
+        public required int Font { get; set; }
+        public required int Cpi { get; set; }
+        public required int OffsetX { get; set; }
+        public required int OffsetY { get; set; }
     }
 }
