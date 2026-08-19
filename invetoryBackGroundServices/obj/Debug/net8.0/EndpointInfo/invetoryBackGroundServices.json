@@ -5,6 +5,35 @@
     "version": "1.0"
   },
   "paths": {
+    "/api/poc/get-info-json-async-poc": {
+      "post": {
+        "tags": [
+          "HardwareIoPoc"
+        ],
+        "parameters": [
+          {
+            "name": "ip",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "action"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Machine/get-machine-info": {
       "post": {
         "tags": [

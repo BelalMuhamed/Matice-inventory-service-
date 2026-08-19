@@ -62,5 +62,26 @@
       }
     ],
     "ReturnTypes": []
+  },
+  {
+    "ContainingType": "invetoryBackGroundServices.Controllers.HardwareIoPocController",
+    "Method": "GetInfoJsonAsyncPoc",
+    "RelativePath": "api/poc/get-info-json-async-poc",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "ip",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "action",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
   }
 ]
