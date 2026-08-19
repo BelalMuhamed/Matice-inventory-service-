@@ -235,3 +235,8 @@ C:\Users\b.zakaria\Desktop\Inventory For MDP\InvetoryServices\invetoryBackGround
 C:\Users\b.zakaria\Desktop\Inventory For MDP\InvetoryServices\invetoryBackGroundServices\invetoryBackGroundServices\obj\Debug\net8.0\invetoryBackGroundServices.pdb
 C:\Users\b.zakaria\Desktop\Inventory For MDP\InvetoryServices\invetoryBackGroundServices\invetoryBackGroundServices\obj\Debug\net8.0\invetoryBackGroundServices.genruntimeconfig.cache
 C:\Users\b.zakaria\Desktop\Inventory For MDP\InvetoryServices\invetoryBackGroundServices\invetoryBackGroundServices\obj\Debug\net8.0\ref\invetoryBackGroundServices.dll
+C:\Users\b.zakaria\Desktop\Inventory For MDP\InvetoryServices\invetoryBackGroundServices\invetoryBackGroundServices\bin\Debug\net8.0\ar\invetoryBackGroundServices.resources.dll
+C:\Users\b.zakaria\Desktop\Inventory For MDP\InvetoryServices\invetoryBackGroundServices\invetoryBackGroundServices\obj\Debug\net8.0\invetoryBackGroundServices.Resources.Localization.Messages.resources
+C:\Users\b.zakaria\Desktop\Inventory For MDP\InvetoryServices\invetoryBackGroundServices\invetoryBackGroundServices\obj\Debug\net8.0\invetoryBackGroundServices.Resources.Localization.Messages.ar.resources
+C:\Users\b.zakaria\Desktop\Inventory For MDP\InvetoryServices\invetoryBackGroundServices\invetoryBackGroundServices\obj\Debug\net8.0\invetoryBackGroundServices.csproj.GenerateResource.cache
+C:\Users\b.zakaria\Desktop\Inventory For MDP\InvetoryServices\invetoryBackGroundServices\invetoryBackGroundServices\obj\Debug\net8.0\ar\invetoryBackGroundServices.resources.dll

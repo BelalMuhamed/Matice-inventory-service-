@@ -60,7 +60,24 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineResponseApiResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineResponseApiResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineResponseApiResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -91,7 +108,24 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineOperationResultApiResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineOperationResultApiResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineOperationResultApiResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -122,7 +156,24 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineOperationResultApiResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineOperationResultApiResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineOperationResultApiResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -161,6 +212,35 @@
   },
   "components": {
     "schemas": {
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "message": {
+            "type": "string",
+            "nullable": true,
+            "readOnly": true
+          },
+          "category": {
+            "type": "string",
+            "nullable": true
+          },
+          "validationErrors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "EjectCardReq": {
         "type": "object",
         "properties": {
@@ -189,6 +269,162 @@
           "port": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MachineConfiguration": {
+        "type": "object",
+        "properties": {
+          "machineModel": {
+            "type": "string",
+            "nullable": true
+          },
+          "machineName": {
+            "type": "string",
+            "nullable": true
+          },
+          "machineSN": {
+            "type": "string",
+            "nullable": true
+          },
+          "numberOfFeeders": {
+            "type": "string",
+            "nullable": true
+          },
+          "cardExit": {
+            "type": "string",
+            "nullable": true
+          },
+          "cardReject": {
+            "type": "string",
+            "nullable": true
+          },
+          "cardCounter": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MachineInfoJSON": {
+        "type": "object",
+        "properties": {
+          "machineStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "cardInside": {
+            "type": "string",
+            "nullable": true
+          },
+          "coverOpen": {
+            "type": "string",
+            "nullable": true
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "feeder0CardPresence": {
+            "type": "string",
+            "nullable": true
+          },
+          "feeder1CardPresence": {
+            "type": "string",
+            "nullable": true
+          },
+          "tipperStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "tipperTemperature": {
+            "type": "string",
+            "nullable": true
+          },
+          "tipperNearEnd": {
+            "type": "string",
+            "nullable": true
+          },
+          "tipperEndRibbon": {
+            "type": "string",
+            "nullable": true
+          },
+          "rearInfillerNearEnd": {
+            "type": "string",
+            "nullable": true
+          },
+          "rearInfillerEndRibbon": {
+            "type": "string",
+            "nullable": true
+          },
+          "topInfillerNearEnd": {
+            "type": "string",
+            "nullable": true
+          },
+          "topInfillerEndRibbon": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MachineOperationResult": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "nullable": true
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MachineOperationResultApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MachineOperationResult"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MachineResponse": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "nullable": true
+          },
+          "machineConfiguration": {
+            "$ref": "#/components/schemas/MachineConfiguration"
+          },
+          "machineStatus": {
+            "$ref": "#/components/schemas/MachineInfoJSON"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MachineResponseApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MachineResponse"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ApiError"
           }
         },
         "additionalProperties": false

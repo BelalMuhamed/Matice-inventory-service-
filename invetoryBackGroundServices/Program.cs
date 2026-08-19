@@ -1,10 +1,16 @@
 
+using invetoryBackGroundServices.Machine;
+using invetoryBackGroundServices.Middleware;
 using invetoryBackGroundServices.Options;
 using invetoryBackGroundServices.Security;
 using invetoryBackGroundServices.Services;
 using MATICA_S3300e.LAN;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using System.Globalization;
 using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -23,17 +29,49 @@ namespace invetoryBackGroundServices
             });
 
 
-            builder.Services.AddControllers().AddJsonOptions(options =>
+            builder.Services.AddControllers(options =>
+            {
+                // Centralized error-message localization for every action result, same mechanism
+                // as the Inventory API's filter of the same name.
+                options.Filters.Add<Filters.LocalizeErrorResultFilter>();
+            }).AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
 
+            // Resource files live in Resources/Localization, so the localizer must look there:
+            // IStringLocalizer<Messages> then resolves Messages.resx / Messages.ar.resx by error code.
+            builder.Services.AddLocalization(options => options.ResourcesPath = "Resources/Localization");
+
+            builder.Services.Configure<RequestLocalizationOptions>(options =>
+            {
+                // Same two cultures as the Inventory API, so both services answer a given
+                // Accept-Language identically.
+                var supported = new[] { new CultureInfo("en"), new CultureInfo("ar") };
+                options.DefaultRequestCulture = new RequestCulture("en");
+                options.SupportedCultures = supported;
+                options.SupportedUICultures = supported;
+
+                options.RequestCultureProviders = new IRequestCultureProvider[]
+                {
+                    new QueryStringRequestCultureProvider(),
+                    new AcceptLanguageHeaderRequestCultureProvider()
+                };
+            });
+
+            // Replaces the previous AllowAnyOrigin policy. Origins come from configuration so
+            // they differ per environment without a code change; an empty list fails startup
+            // rather than silently reverting to permitting everything.
+            CorsPolicyOptions corsOptions =
+                builder.Configuration.GetSection(CorsPolicyOptions.SectionName).Get<CorsPolicyOptions>() ?? new CorsPolicyOptions();
+            EnsureCorsOriginsConfigured(corsOptions);
+
             builder.Services.AddCors(options =>
             {
                 options.AddDefaultPolicy(policy =>
                 {
-                    policy.AllowAnyOrigin()
+                    policy.WithOrigins(corsOptions.AllowedOrigins)
                           .AllowAnyHeader()
                           .AllowAnyMethod();
                 });
@@ -105,6 +143,29 @@ namespace invetoryBackGroundServices
             builder.Services.AddScoped<ActionClass>();
             builder.Services.AddScoped<CardData>();
 
+            // Machine communication timeout: backend configuration, not per-request data.
+            builder.Services.AddOptions<MachineCommunicationOptions>()
+                .Bind(builder.Configuration.GetSection(MachineCommunicationOptions.SectionName))
+                .Validate(o => o.TimeoutSeconds > 0, "MachineCommunication TimeoutSeconds must be greater than zero.")
+                .ValidateOnStart();
+
+            // Async machine communication, replacing the blocking HttpWebRequest pattern. The
+            // transport is deliberately vendor-neutral; MaticaCommandClient holds everything
+            // Matica-specific, so another device family means a new command client rather than
+            // changes to communication code.
+            builder.Services.AddHttpClient<IMachineTransport, MachineHttpTransport>()
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                {
+                    // Retained deliberately: the machine presents a self-signed certificate on the
+                    // LAN, exactly as the pre-existing httpPOST/httpPOSTGetInfoJson assume. The
+                    // earlier review's recommendation to pin this specific device's certificate
+                    // instead of accepting any still stands as a follow-up - changing it here
+                    // would alter behavior this phase is meant to hold constant.
+                    ServerCertificateCustomValidationCallback = (_, _, _, _) => true
+                });
+
+            builder.Services.AddScoped<IMaticaCommandClient, MaticaCommandClient>();
+
             // Matica Print Flow: typed HttpClient (not a new HttpClient() per call, unlike the old
             // API_HttpClient this replaces) for the two backend calls to the Inventory API.
             builder.Services.AddHttpClient<IPrintFlowClient, PrintFlowClient>((sp, client) =>
@@ -118,6 +179,14 @@ namespace invetoryBackGroundServices
 
 
             var app = builder.Build();
+
+            // Outermost, so it catches anything thrown further down the pipeline.
+            app.UseMiddleware<GlobalExceptionMiddleware>();
+
+            // Before the endpoints, so the culture is resolved by the time either the error
+            // filter or the exception middleware needs to localize a message.
+            app.UseRequestLocalization();
+
             app.UseCors();
 
             if (app.Environment.IsDevelopment())
@@ -136,6 +205,19 @@ namespace invetoryBackGroundServices
             app.MapControllers();
 
             app.Run();
+        }
+
+        private static void EnsureCorsOriginsConfigured(CorsPolicyOptions corsOptions)
+        {
+            if (corsOptions.AllowedOrigins is null || corsOptions.AllowedOrigins.Length == 0)
+            {
+                throw new InvalidOperationException(
+                    $"No CORS origins are configured. Set '{CorsPolicyOptions.SectionName}:" +
+                    $"{nameof(CorsPolicyOptions.AllowedOrigins)}' to the exact origin(s) allowed to call " +
+                    "this service (for example the Angular app's origin). This deliberately fails startup " +
+                    "rather than falling back to allowing any origin, since this service can physically " +
+                    "move and emboss cards.");
+            }
         }
 
         private static void EnsurePrintAgentSigningKeyPresent(IConfiguration configuration)

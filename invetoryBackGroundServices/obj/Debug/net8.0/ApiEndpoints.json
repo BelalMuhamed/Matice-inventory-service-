@@ -13,7 +13,17 @@
         "IsRequired": true
       }
     ],
-    "ReturnTypes": []
+    "ReturnTypes": [
+      {
+        "Type": "invetoryBackGroundServices.Common.ApiResponse\u00601[[invetoryBackGroundServices.Common.MachineOperationResult, invetoryBackGroundServices, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
   },
   {
     "ContainingType": "invetoryBackGroundServices.Controllers.MachineController",
@@ -29,7 +39,17 @@
         "IsRequired": true
       }
     ],
-    "ReturnTypes": []
+    "ReturnTypes": [
+      {
+        "Type": "invetoryBackGroundServices.Common.ApiResponse\u00601[[MATICA_S3300e.LAN.MachineResponse, invetoryBackGroundServices, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
   },
   {
     "ContainingType": "invetoryBackGroundServices.Controllers.MachineController",
@@ -61,7 +81,17 @@
         "IsRequired": true
       }
     ],
-    "ReturnTypes": []
+    "ReturnTypes": [
+      {
+        "Type": "invetoryBackGroundServices.Common.ApiResponse\u00601[[invetoryBackGroundServices.Common.MachineOperationResult, invetoryBackGroundServices, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
   },
   {
     "ContainingType": "invetoryBackGroundServices.Controllers.HardwareIoPocController",
