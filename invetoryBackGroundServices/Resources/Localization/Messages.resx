@@ -94,4 +94,10 @@
   <data name="Machine.BackendUnavailable" xml:space="preserve">
     <value>Could not reach the Inventory API to validate or record this print.</value>
   </data>
+  <data name="Machine.Unauthenticated" xml:space="preserve">
+    <value>A valid Print Agent token is required.</value>
+  </data>
+  <data name="Machine.Forbidden" xml:space="preserve">
+    <value>This token is not permitted to perform this operation.</value>
+  </data>
 </root>

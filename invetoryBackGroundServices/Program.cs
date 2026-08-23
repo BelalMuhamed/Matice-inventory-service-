@@ -1,13 +1,16 @@
 
+using invetoryBackGroundServices.Common;
 using invetoryBackGroundServices.Machine;
 using invetoryBackGroundServices.Middleware;
 using invetoryBackGroundServices.Options;
+using invetoryBackGroundServices.Resources.Localization;
 using invetoryBackGroundServices.Security;
 using invetoryBackGroundServices.Services;
 using MATICA_S3300e.LAN;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Globalization;
@@ -118,6 +121,35 @@ namespace invetoryBackGroundServices
                         ValidIssuer = printAgentAuth.Issuer,
                         ValidAudience = printAgentAuth.Audience,
                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(printAgentAuth.SigningKey))
+                    };
+
+                    // Without these, a missing/invalid/expired token or a token that fails the
+                    // PrintAgentOnly policy's claim check never reaches a controller action, so
+                    // the standard ApiResponse<T> envelope was never being written at all - the
+                    // caller just saw an empty 401/403.
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnChallenge = async context =>
+                        {
+                            // Fires for no token, a malformed token, an expired token, or one
+                            // signed with the wrong key. HandleResponse() stops the default
+                            // handler from also writing its own (empty) response afterward.
+                            context.HandleResponse();
+                            var localizer = context.HttpContext.RequestServices
+                                .GetRequiredService<IStringLocalizer<Messages>>();
+                            await ErrorResponseWriter.WriteAsync(
+                                context.HttpContext.Response, MachineErrors.Unauthenticated(), localizer);
+                        },
+                        OnForbidden = async context =>
+                        {
+                            // Fires when the token validated but failed the PrintAgentOnly
+                            // policy's claim check - structurally valid, but not a Print Agent
+                            // token (missing the purpose claim).
+                            var localizer = context.HttpContext.RequestServices
+                                .GetRequiredService<IStringLocalizer<Messages>>();
+                            await ErrorResponseWriter.WriteAsync(
+                                context.HttpContext.Response, MachineErrors.Forbidden(), localizer);
+                        }
                     };
                 });
             builder.Services.AddAuthorization(options =>

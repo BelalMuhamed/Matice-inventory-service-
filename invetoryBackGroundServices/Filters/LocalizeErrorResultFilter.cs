@@ -32,13 +32,16 @@ namespace invetoryBackGroundServices.Filters
             if (context.Result is ObjectResult { Value: ILocalizableApiResponse envelope } &&
                 envelope.Error is { Code.Length: > 0 } error)
             {
-                LocalizedString localized = error.MessageArg is null
-                    ? _localizer[error.Code]
-                    : _localizer[error.Code, error.MessageArg];
+                // Localize the base message only (no format args) - the detail is appended in
+                // code via ApiError.ComposeMessage, not substituted into a resx placeholder. See
+                // MachineError.MessageArg's doc comment for why: the args-based indexer silently
+                // drops the detail whenever a resource string has no {0}, which every entry in
+                // this catalogue did until this fix.
+                LocalizedString localized = _localizer[error.Code];
 
                 if (!localized.ResourceNotFound)
                 {
-                    envelope.ReplaceErrorMessage(localized.Value);
+                    envelope.ReplaceErrorMessage(ApiError.ComposeMessage(localized.Value, error.MessageArg));
                 }
             }
 

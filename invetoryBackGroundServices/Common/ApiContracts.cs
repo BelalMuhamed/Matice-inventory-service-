@@ -85,10 +85,21 @@ namespace invetoryBackGroundServices.Common
         public string? MessageArg { get; init; }
 
         /// <summary>
-        /// Field-level errors, keyed by field name. Populated only for 422 failures; null
-        /// otherwise so it is omitted from the serialized body.
+        /// Optional field-level errors, keyed by field name. Populated only for 422 failures;
+        /// null otherwise so it is omitted from the serialized body.
         /// </summary>
         public IReadOnlyDictionary<string, string[]>? ValidationErrors { get; init; }
+
+        /// <summary>
+        /// Appends <paramref name="detail"/> to <paramref name="baseMessage"/> when present,
+        /// otherwise returns <paramref name="baseMessage"/> unchanged. The single place this
+        /// composition happens, used identically by <see cref="MachineError.ToApiError"/> (the
+        /// English default) and by the localization filter/middleware (the culture-specific
+        /// text) - see <see cref="MachineError.MessageArg"/>'s doc comment for why this is a
+        /// plain append rather than a resx <c>{0}</c> substitution.
+        /// </summary>
+        public static string ComposeMessage(string baseMessage, string? detail) =>
+            string.IsNullOrWhiteSpace(detail) ? baseMessage : $"{baseMessage} {detail}";
     }
 
     /// <summary>

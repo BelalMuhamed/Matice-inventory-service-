@@ -94,4 +94,10 @@
   <data name="Machine.BackendUnavailable" xml:space="preserve">
     <value>مقدرناش نوصل لـ Inventory API عشان نتأكد من الكارت أو نسجل نتيجة الطباعة.</value>
   </data>
+  <data name="Machine.Unauthenticated" xml:space="preserve">
+    <value>لازم توكن صالح لجهاز الطباعة.</value>
+  </data>
+  <data name="Machine.Forbidden" xml:space="preserve">
+    <value>التوكن ده مش مسموح له يعمل العملية دي.</value>
+  </data>
 </root>

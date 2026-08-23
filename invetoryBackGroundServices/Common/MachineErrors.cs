@@ -56,7 +56,17 @@ namespace invetoryBackGroundServices.Common
     /// <param name="Code">Stable identifier, also the localization resource key.</param>
     /// <param name="Category">One of <see cref="MachineErrorCategory"/>.</param>
     /// <param name="Message">English default message.</param>
-    /// <param name="MessageArg">Optional <c>{0}</c> substitution argument.</param>
+    /// <param name="MessageArg">
+    /// Optional contextual detail (e.g. the Inventory API's own business-rejection reason, or an
+    /// exception message). Appended to the base message by <see cref="ToApiError"/> and by the
+    /// localization filter/middleware - not substituted via a resx <c>{0}</c> placeholder. That
+    /// distinction matters: a placeholder-based approach silently drops this detail whenever
+    /// <see cref="MessageArg"/> is null, because <c>IStringLocalizer</c>'s no-args indexer
+    /// returns the resource text completely unformatted rather than filling the placeholder with
+    /// anything - which is exactly how this went wrong the first time (every resx entry in this
+    /// catalogue was missing <c>{0}</c> entirely, so the detail was computed, passed, and then
+    /// silently discarded at every call site that supplied one).
+    /// </param>
     public readonly record struct MachineError(string Code, string Category, string Message, string? MessageArg = null)
     {
         /// <summary>HTTP status this error's category maps to.</summary>
@@ -74,12 +84,16 @@ namespace invetoryBackGroundServices.Common
             _ => 500
         };
 
-        /// <summary>Projects this error onto the wire contract.</summary>
+        /// <summary>
+        /// Projects this error onto the wire contract, with <see cref="MessageArg"/> (if present)
+        /// appended to <see cref="Message"/> - see <see cref="MessageArg"/>'s own doc comment for
+        /// why appending rather than substituting a placeholder.
+        /// </summary>
         public ApiError ToApiError() => new()
         {
             Code = Code,
             Category = Category,
-            Message = Message,
+            Message = ApiError.ComposeMessage(Message, MessageArg),
             MessageArg = MessageArg
         };
     }
@@ -159,5 +173,24 @@ namespace invetoryBackGroundServices.Common
         public static MachineError BackendUnavailable(string? detail = null) => new(
             "Machine.BackendUnavailable", MachineErrorCategory.BackendUnavailable,
             "Could not reach the Inventory API to validate or record this print.", detail);
+
+        /// <summary>
+        /// No Print Agent token was supplied, or the supplied one is missing, malformed, expired,
+        /// or signed with the wrong key. Used by the JwtBearer <c>OnChallenge</c> handler in
+        /// <see cref="Program"/> - authentication failure never reaches a controller action, so
+        /// nothing in this catalogue was ever returning a body for this case before.
+        /// </summary>
+        public static MachineError Unauthenticated() => new(
+            "Machine.Unauthenticated", MachineErrorCategory.Unauthorized,
+            "A valid Print Agent token is required.");
+
+        /// <summary>
+        /// A token was supplied and validated, but it does not satisfy the <c>PrintAgentOnly</c>
+        /// policy (missing the <c>purpose</c> claim - i.e. a token that is structurally valid but
+        /// was never meant for this service). Used by the JwtBearer <c>OnForbidden</c> handler.
+        /// </summary>
+        public static MachineError Forbidden() => new(
+            "Machine.Forbidden", MachineErrorCategory.Forbidden,
+            "This token is not permitted to perform this operation.");
     }
 }
