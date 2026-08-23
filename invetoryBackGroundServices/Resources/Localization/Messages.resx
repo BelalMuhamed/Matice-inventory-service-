@@ -85,4 +85,13 @@
   <data name="Machine.BranchScopeMismatch" xml:space="preserve">
     <value>The requested branch does not match this token's own scope.</value>
   </data>
+  <data name="Machine.CannotEject" xml:space="preserve">
+    <value>The machine could not eject the card.</value>
+  </data>
+  <data name="Machine.BackendRejected" xml:space="preserve">
+    <value>The Inventory API rejected this print request.</value>
+  </data>
+  <data name="Machine.BackendUnavailable" xml:space="preserve">
+    <value>Could not reach the Inventory API to validate or record this print.</value>
+  </data>
 </root>

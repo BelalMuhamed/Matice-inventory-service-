@@ -492,6 +492,22 @@
           "offsetY": {
             "type": "integer",
             "format": "int32"
+          },
+          "tipperTemperature": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "tipperPressure": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "tipperConsumption": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "tipperTime": {
+            "type": "integer",
+            "format": "int32"
           }
         },
         "additionalProperties": false

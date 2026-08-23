@@ -29,6 +29,21 @@ namespace invetoryBackGroundServices.Common
         /// <summary>Machine responded, but the response could not be parsed as expected. Maps to HTTP 502.</summary>
         public const string ProtocolError = "ProtocolError";
 
+        /// <summary>
+        /// The Inventory API (not the physical machine) rejected a print-flow backend call for a
+        /// business reason - wrong branch, card not found, insufficient stock, already disposed.
+        /// Maps to HTTP 409. Kept distinct from <see cref="MachineRejected"/> since these two
+        /// "somethings" (the physical device vs. the Inventory API) call for different operator
+        /// responses even though both map to the same status code.
+        /// </summary>
+        public const string BackendRejected = "BackendRejected";
+
+        /// <summary>
+        /// Could not reach, or could not get a usable answer from, the Inventory API for a
+        /// print-flow backend call, after retries. Maps to HTTP 502.
+        /// </summary>
+        public const string BackendUnavailable = "BackendUnavailable";
+
         /// <summary>Anything else, including bugs. Maps to HTTP 500.</summary>
         public const string Internal = "Internal";
     }
@@ -54,6 +69,8 @@ namespace invetoryBackGroundServices.Common
             MachineErrorCategory.Timeout => 504,
             MachineErrorCategory.CommunicationFailure => 502,
             MachineErrorCategory.ProtocolError => 502,
+            MachineErrorCategory.BackendRejected => 409,
+            MachineErrorCategory.BackendUnavailable => 502,
             _ => 500
         };
 
@@ -127,5 +144,20 @@ namespace invetoryBackGroundServices.Common
         public static MachineError BranchScopeMismatch() => new(
             "Machine.BranchScopeMismatch", MachineErrorCategory.Forbidden,
             "The requested branch does not match this token's own scope.");
+
+        /// <summary>The machine is not ready and could not eject after a failed step (worse than the original failure).</summary>
+        public static MachineError CannotEject() => new(
+            "Machine.CannotEject", MachineErrorCategory.MachineRejected,
+            "The machine could not eject the card.");
+
+        /// <summary>Backend Call #1/#2's Inventory API call returned a well-formed business rejection.</summary>
+        public static MachineError BackendRejected(string? detail = null) => new(
+            "Machine.BackendRejected", MachineErrorCategory.BackendRejected,
+            "The Inventory API rejected this print request.", detail);
+
+        /// <summary>Backend Call #1/#2 could not reach, or get a usable answer from, the Inventory API.</summary>
+        public static MachineError BackendUnavailable(string? detail = null) => new(
+            "Machine.BackendUnavailable", MachineErrorCategory.BackendUnavailable,
+            "Could not reach the Inventory API to validate or record this print.", detail);
     }
 }

@@ -30,5 +30,18 @@
         public required int Cpi { get; set; }
         public required int OffsetX { get; set; }
         public required int OffsetY { get; set; }
+
+        /// <summary>
+        /// Printer-level tipper settings (Matica Print Flow, tipper-parameter phase), sourced from
+        /// the Inventory API's <c>MaticaPrinterConfiguration</c> - Angular fetches them the same
+        /// way it already fetches <see cref="Font"/>/<see cref="Cpi"/>/<see cref="OffsetX"/>/
+        /// <see cref="OffsetY"/> and passes them through here. Optional, defaulting to 0: a
+        /// printer that has never had these configured behaves exactly as it did before this
+        /// phase existed (every Emboss command sent 0 for all four, unconditionally).
+        /// </summary>
+        public int TipperTemperature { get; set; }
+        public int TipperPressure { get; set; }
+        public int TipperConsumption { get; set; }
+        public int TipperTime { get; set; }
     }
 }

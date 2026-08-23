@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using MATICA_S3300e.LAN;
@@ -11,15 +12,24 @@ namespace invetoryBackGroundServices.Machine
     /// Matica-specific command construction and response interpretation, sitting on top of the
     /// vendor-neutral <see cref="IMachineTransport"/>. This is the layer that would be duplicated
     /// (not modified) to support a different device family later.
-    /// <para>
-    /// Scope note: this phase covers only the three commands currently exposed as standalone
-    /// endpoints - <see cref="GetInfoAsync"/>, <see cref="RestoreAsync"/>,
-    /// <see cref="EjectCardAsync"/>. The print-flow commands (LoadCard/ReadMAG/Emboss) migrate in
-    /// the next phase, together with the tipper-parameter work, so the print path is changed once
-    /// rather than twice. The pre-existing synchronous <c>MachineCommands</c> remains the code
-    /// path for those commands until then.
-    /// </para>
     /// </summary>
+    /// <summary>Card-layout data for one embossed line, plus the printer's tipper settings for this job.</summary>
+    /// <param name="Text">The line to emboss (e.g. cardholder name).</param>
+    /// <param name="Font">Font index.</param>
+    /// <param name="Cpi">Characters per inch.</param>
+    /// <param name="OffsetX">Horizontal offset.</param>
+    /// <param name="OffsetY">Vertical offset.</param>
+    /// <param name="TipperTemperature">
+    /// Printer-level tipper settings (Matica Print Flow, tipper-parameter phase) - sourced from
+    /// the Inventory API's <c>MaticaPrinterConfiguration</c>, supplied by Angular in the print
+    /// request the same way it already supplies <see cref="Font"/>/<see cref="Cpi"/>/
+    /// <see cref="OffsetX"/>/<see cref="OffsetY"/>. Default 0 for a printer that has never had
+    /// these configured, exactly matching every Emboss command sent before this phase existed.
+    /// </param>
+    public readonly record struct EmbossRequest(
+        string Text, int Font, int Cpi, int OffsetX, int OffsetY,
+        int TipperTemperature = 0, int TipperPressure = 0, int TipperConsumption = 0, int TipperTime = 0);
+
     public interface IMaticaCommandClient
     {
         /// <summary>
@@ -34,6 +44,15 @@ namespace invetoryBackGroundServices.Machine
 
         /// <summary>Ejects the currently loaded card to the given stacker/hopper.</summary>
         Task EjectCardAsync(string ip, string port, int hopperId, CancellationToken cancellationToken);
+
+        /// <summary>Loads a card from the given feeder.</summary>
+        Task LoadCardAsync(string ip, string port, int feederId, CancellationToken cancellationToken);
+
+        /// <summary>Reads magnetic-stripe data from the given track and returns the raw track data.</summary>
+        Task<string> ReadMagAsync(string ip, string port, string trackId, CancellationToken cancellationToken);
+
+        /// <summary>Embosses one line per <paramref name="request"/>.</summary>
+        Task EmbossAsync(string ip, string port, EmbossRequest request, CancellationToken cancellationToken);
     }
 
     /// <inheritdoc cref="IMaticaCommandClient" />
@@ -112,6 +131,87 @@ namespace invetoryBackGroundServices.Machine
             string body = await _transport.PostAsync(ip, port, ActionPath, json, cancellationToken);
 
             EnsureAccepted(body);
+        }
+
+        /// <inheritdoc />
+        public async Task LoadCardAsync(
+            string ip, string port, int feederId, CancellationToken cancellationToken)
+        {
+            var command = new LoadCardClass("LoadCard", feederId.ToString());
+            string json = JsonConvert.SerializeObject(command, SerializerSettings);
+
+            string body = await _transport.PostAsync(ip, port, ActionPath, json, cancellationToken);
+
+            EnsureAccepted(body);
+        }
+
+        /// <inheritdoc />
+        public async Task<string> ReadMagAsync(
+            string ip, string port, string trackId, CancellationToken cancellationToken)
+        {
+            var command = new ReadMAGClass("ReadMAG", trackId);
+            string json = JsonConvert.SerializeObject(command, SerializerSettings);
+
+            string body = await _transport.PostAsync(ip, port, ActionPath, json, cancellationToken);
+
+            // ParseData, not EnsureAccepted: ReadMAG's whole purpose is the track data carried in
+            // AnswerClass.Data, which EnsureAccepted validates but does not return.
+            return ParseData(body);
+        }
+
+        /// <inheritdoc />
+        public async Task EmbossAsync(
+            string ip, string port, EmbossRequest request, CancellationToken cancellationToken)
+        {
+            var lines = new List<EmbossLine>
+            {
+                new(request.Font.ToString(), request.Cpi.ToString(), request.OffsetX.ToString(),
+                    request.OffsetY.ToString(), request.Text)
+            };
+
+            var command = new EmbossLineClass(
+                "Emboss", lines, "Y",
+                request.TipperTemperature.ToString(), request.TipperPressure.ToString(),
+                request.TipperConsumption.ToString(), request.TipperTime.ToString());
+
+            string json = JsonConvert.SerializeObject(command, SerializerSettings);
+            string body = await _transport.PostAsync(ip, port, ActionPath, json, cancellationToken);
+
+            EnsureAccepted(body);
+        }
+
+        /// <summary>
+        /// Same envelope validation as <see cref="EnsureAccepted"/>, but returns
+        /// <see cref="AnswerClass.Data"/> on success instead of discarding it - for commands like
+        /// ReadMAG whose entire purpose is the data the machine returns alongside acceptance.
+        /// </summary>
+        private static string ParseData(string body)
+        {
+            AnswerClass? answer;
+            try
+            {
+                answer = JsonConvert.DeserializeObject<AnswerClass>(body);
+            }
+            catch (JsonException ex)
+            {
+                throw new MachineProtocolException("Machine response could not be parsed.", ex);
+            }
+
+            if (answer is null)
+            {
+                throw new MachineProtocolException("Machine response was empty.");
+            }
+
+            if (string.Equals(answer.Answer, "KO", StringComparison.OrdinalIgnoreCase))
+            {
+                string detail = answer.Error is null
+                    ? "no detail supplied"
+                    : $"Group: {answer.Error.group}, ErrNumber: {answer.Error.code} - {answer.Error.message}";
+
+                throw new MachineRejectedException(detail);
+            }
+
+            return answer.Data ?? string.Empty;
         }
 
         /// <summary>

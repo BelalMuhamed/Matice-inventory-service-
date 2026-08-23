@@ -169,16 +169,26 @@ namespace invetoryBackGroundServices.Controllers
 
 
         /// <summary>
-        /// Matica Print Flow. Rewritten from the ground up: the four legacy business lookups
-        /// (MachineConfigrations/machines/details, PrintConfigurations/get-print-config-for-
-        /// sepecific-face, Products/get-product-by-name, Branch/branches) are gone entirely -
-        /// Angular now supplies everything they used to fetch directly in <paramref name="dto"/>,
-        /// since it already has this data from its own normal Inventory API browsing. The two new
-        /// calls this method makes instead - <see cref="IPrintFlowClient.ResolveForPrintAsync"/>
-        /// (Backend Call #1, right after ReadMAG) and <see cref="IPrintFlowClient.RecordPrintResultAsync"/>
-        /// (Backend Call #2, right after EjectCard) - own no business logic themselves; they call
-        /// the Inventory API and react to what it says. This service never sees the Known-way/
-        /// Unknown-way distinction at all.
+        /// Matica Print Flow, migrated to the async command client. Steps and their order are
+        /// unchanged from the previous version - ready check, LoadCard, ReadMAG, Backend Call #1,
+        /// Emboss, local batch write, EjectCard, Backend Call #2 - only the transport underneath
+        /// each step changed. This service still owns no business logic: it calls the Inventory
+        /// API's two print-flow endpoints and reacts to what they say, it doesn't decide
+        /// Known-way/Unknown-way validation itself.
+        /// <para>
+        /// Failure handling changed shape, not behavior: the async client throws typed
+        /// <see cref="MachineException"/>s instead of returning a reply code, so steps whose
+        /// failure should immediately end the request (the ready check, LoadCard) simply let the
+        /// exception propagate to <see cref="Middleware.GlobalExceptionMiddleware"/>. Steps that
+        /// need a specific recovery action first - ReadMAG and Backend Call #1 both eject the card
+        /// before reporting failure, exactly as before - catch locally and eject, preserving the
+        /// original's own quirk of reporting the eject failure instead of the original error when
+        /// eject itself also fails. Emboss and the final EjectCard are caught locally too, since
+        /// the flow must continue to the local batch write and Backend Call #2 regardless of
+        /// whether the physical print succeeded - this mirrors the previous
+        /// <c>bool printSucceeded = !MachineComm.ValuateReply(Reply)</c> pattern exactly, just
+        /// sourced from a caught exception instead of a reply code.
+        /// </para>
         /// </summary>
         [HttpPost("Print-Card-Holder-Name")]
         public async Task<IActionResult> Print([FromBody] PrintReqDto dto, CancellationToken cancellationToken)
@@ -188,75 +198,48 @@ namespace invetoryBackGroundServices.Controllers
                 return Forbid();
             }
 
+            IActionResult? invalid = ValidateConnection(dto.MachineIp, dto.Port, out string ip);
+            if (invalid is not null) return invalid;
+
             // Generated once per physical print attempt, reused on every retry of Backend Call #2
             // (see PrintFlowClient.RecordPrintResultAsync) - never regenerated mid-attempt.
             string idempotencyKey = Guid.NewGuid().ToString();
 
-            string localBatch;
-            string logData;
-
-            ConnectionInfo.ip = UTILITIES.FormatIP(out ERROR, dto.MachineIp);
-            ConnectionInfo.port = dto.Port;
-            httpAction.sAction = "action";
-            Data.FeederID = dto.FeederId.ToString();
-            Data.StackerID = dto.HopperId.ToString();
-            Data.ReadTrackID = "2";
-
             #region get machine info and check status
-            int Reply = MachineComm.CommandManagement(MachineCommands.Commands.GetInfoJson, ref InfoText);
-            if (MachineComm.ValuateReply(Reply))
-            {
-                return BadRequest(new { success = false, message = enumType.Error + InfoText });
-            }
+            // GetInfoAsync throwing here (communication failure, timeout, protocol error)
+            // propagates to the exception middleware directly - nothing to eject yet, so there is
+            // no recovery action to perform first, same as the previous version's behavior.
+            MachineResponse status = await _machine.GetInfoAsync(ip, dto.Port, cancellationToken);
 
-            // Matica Print Flow, status-parsing fix: structured deserialization into MachineInfoJSON
-            // instead of raw string.Contains(...) against the response text. Only MachineStatus/
-            // CardInside/TipperStatus are confirmed wire field names (see CardDataBean.cs) - this
-            // check only relies on those three, so it doesn't depend on any of the unconfirmed ones.
-            MachineResponse? status;
-            try
-            {
-                status = Newtonsoft.Json.JsonConvert.DeserializeObject<MachineResponse>(InfoText);
-            }
-            catch (Newtonsoft.Json.JsonException)
-            {
-                status = null;
-            }
-
-            if (status is null
+            if (status.MachineStatus is null
                 || status.MachineStatus.machineStatus != "READY"
                 || status.MachineStatus.CardInside != "no"
                 || status.MachineStatus.TipperStatus != "Ready")
             {
-                return BadRequest(new { success = false, message = "machine isn't ready to print yet !" });
+                return Failure(MachineErrors.NotReady());
             }
             #endregion
 
             #region loadcard
-            Reply = MachineComm.CommandManagement(MachineCommands.Commands.LoadCard, ref InfoText);
-            if (MachineComm.ValuateReply(Reply))
-            {
-                return BadRequest(new { success = false, message = enumType.Error + InfoText });
-            }
+            // Same reasoning as the ready check: a LoadCard failure propagates directly, since
+            // there is no card to eject yet if loading itself failed.
+            await _machine.LoadCardAsync(ip, dto.Port, dto.FeederId, cancellationToken);
             #endregion
 
             #region ReadMAGData
-            Reply = MachineComm.CommandManagement(MachineCommands.Commands.ReadMAG, ref InfoText);
-            if (MachineComm.ValuateReply(Reply))
+            string trackData;
+            try
             {
-                for (int i = 0; i < 20; i++) Data.EmbossLineText[i] = string.Empty;
-
-                Reply = MachineComm.CommandManagement(MachineCommands.Commands.EjectCard, ref InfoText);
-                if (MachineComm.ValuateReply(Reply))
-                {
-                    return BadRequest(new { success = false, message = "cann't eject card   !" });
-                }
-                return BadRequest(new { success = false, message = enumType.Error + InfoText });
+                trackData = await _machine.ReadMagAsync(ip, dto.Port, "2", cancellationToken);
+            }
+            catch (MachineException ex)
+            {
+                return await EjectThenFailAsync(ip, dto.Port, dto.HopperId, ex.Error, cancellationToken);
             }
 
             // Raw PAN, used only transiently for Backend Call #1 below - never logged, never
             // assigned anywhere else, never persisted locally. Matica Print Flow, raw PAN handling.
-            string rawPan = MachineComm.sReadMAGData.Substring(0, 16);
+            string rawPan = trackData.Length >= 16 ? trackData.Substring(0, 16) : trackData;
             #endregion
 
             #region Backend Call #1: resolve-for-print
@@ -266,48 +249,45 @@ namespace invetoryBackGroundServices.Controllers
 
             if (!resolveResult.Success)
             {
-                for (int i = 0; i < 20; i++) Data.EmbossLineText[i] = string.Empty;
                 _log.AppendLog(
                     " [Card Holder Name:" + dto.CardHolderName + "] [Product:" + dto.ProductId +
                     "] resolve-for-print failed: " + resolveResult.ErrorMessage, Logger.LogType.Error);
 
-                Reply = MachineComm.CommandManagement(MachineCommands.Commands.EjectCard, ref InfoText);
-                if (MachineComm.ValuateReply(Reply))
-                {
-                    return BadRequest(new { success = false, message = "cann't eject card   !" });
-                }
+                MachineError backendError = resolveResult.IsTransient
+                    ? MachineErrors.BackendUnavailable(resolveResult.ErrorMessage)
+                    : MachineErrors.BackendRejected(resolveResult.ErrorMessage);
 
-                string reason = resolveResult.IsTransient
-                    ? "cann't validate this card right now, please check server connection !"
-                    : (resolveResult.ErrorMessage ?? "card not found !");
-                return BadRequest(new { success = false, message = reason });
+                return await EjectThenFailAsync(ip, dto.Port, dto.HopperId, backendError, cancellationToken);
             }
 
             long productItemId = resolveResult.Data!.ProductItemId;
             string maskedPan = resolveResult.Data.MaskedPan;
             #endregion
 
-            #region Load Embossing information
-            for (int i = 0; i < 20; i++) Data.EmbossLineText[i] = string.Empty;
-            Data.EmbossLineText[0] = dto.CardHolderName.Trim();
-            Data.EmbossLineFont[0] = dto.Font.ToString();
-            Data.EmbossLineCpi[0] = dto.Cpi.ToString();
-            Data.EmbossLineX[0] = dto.OffsetX.ToString();
-            Data.EmbossLineY[0] = dto.OffsetY.ToString();
-            Data.TipperEnable = "Y";
-            #endregion
-
             #region EmbossCardHolderName
-            Reply = MachineComm.CommandManagement(MachineCommands.Commands.Emboss, ref InfoText);
-            bool printSucceeded = !MachineComm.ValuateReply(Reply);
+            var embossRequest = new EmbossRequest(
+                dto.CardHolderName.Trim(), dto.Font, dto.Cpi, dto.OffsetX, dto.OffsetY,
+                dto.TipperTemperature, dto.TipperPressure, dto.TipperConsumption, dto.TipperTime);
+
+            bool printSucceeded;
+            try
+            {
+                await _machine.EmbossAsync(ip, dto.Port, embossRequest, cancellationToken);
+                printSucceeded = true;
+            }
+            catch (MachineException ex)
+            {
+                printSucceeded = false;
+                _log.AppendLog($"Emboss failed: {ex.Message}", Logger.LogType.Error);
+            }
             #endregion
 
             #region save to local batch
-            logData = " [Card Holder Name:" + dto.CardHolderName + "] [Product:" + dto.ProductId +
+            string logData = " [Card Holder Name:" + dto.CardHolderName + "] [Product:" + dto.ProductId +
                 "] [Card PAN:" + maskedPan + "] [Status:" + (printSucceeded ? "Success" : "Error") + "]";
             _log.AppendLog(logData, printSucceeded ? Logger.LogType.Info : Logger.LogType.Error);
 
-            localBatch = Path.Combine(AppContext.BaseDirectory, "LocalBatch.lbt");
+            string localBatch = Path.Combine(AppContext.BaseDirectory, "LocalBatch.lbt");
             if (!System.IO.File.Exists(localBatch)) System.IO.File.Create(localBatch).Close();
             using (StreamWriter streamWriter = new StreamWriter(localBatch, true))
             {
@@ -323,15 +303,22 @@ namespace invetoryBackGroundServices.Controllers
             }
             #endregion
 
-            for (int i = 0; i < 20; i++) Data.EmbossLineText[i] = string.Empty;
-
             #region EjectCard
             // Eject before Backend Call #2, deliberately: the physical card is already
             // printed-or-spoiled by this point, so it goes to the operator/customer promptly
             // instead of sitting inside the machine for the duration of Backend Call #2's retry
             // loop (up to a few seconds on a transient failure).
-            Reply = MachineComm.CommandManagement(MachineCommands.Commands.EjectCard, ref InfoText);
-            bool ejectSucceeded = !MachineComm.ValuateReply(Reply);
+            bool ejectSucceeded;
+            try
+            {
+                await _machine.EjectCardAsync(ip, dto.Port, dto.HopperId, cancellationToken);
+                ejectSucceeded = true;
+            }
+            catch (MachineException ex)
+            {
+                ejectSucceeded = false;
+                _log.AppendLog($"Eject failed: {ex.Message}", Logger.LogType.Error);
+            }
             #endregion
 
             #region Backend Call #2: print-result
@@ -342,35 +329,51 @@ namespace invetoryBackGroundServices.Controllers
 
             if (!ejectSucceeded)
             {
-                return BadRequest(new { success = false, message = "card printed but failed to eject card !" });
+                return Failure(MachineErrors.CannotEject());
             }
 
             if (!printSucceeded)
             {
-                return BadRequest(new { success = false, message = "Error Printing Card" });
+                return Failure(MachineErrors.Rejected("Error printing card."));
             }
 
             if (!recordResult.Success)
             {
                 // The physical print already succeeded and the card has been ejected - this is the
                 // "printer succeeds, backend logging fails" scenario from the plan. Told to the
-                // caller distinctly rather than as an ordinary failure, since the card itself is
-                // fine; only the Inventory API's record of it could not be confirmed.
+                // caller distinctly (still Success: true - the card is fine) rather than as an
+                // ordinary failure, since only the Inventory API's record of it could not be
+                // confirmed.
                 _log.AppendLog(
                     $"print-result could not be confirmed for item {productItemId}, idempotencyKey {idempotencyKey}: " +
                     recordResult.ErrorMessage, Logger.LogType.Error);
 
-                return StatusCode(207, new
-                {
-                    success = true,
-                    message = "card printed and ejected, but the Inventory API could not confirm the result - " +
-                               "please verify manually.",
-                    productItemId,
-                    idempotencyKey
-                });
+                return StatusCode(207, ApiResponse<PrintResult>.Ok(
+                    new PrintResult(true, false, productItemId, idempotencyKey)));
             }
 
-            return Ok(new { success = true, message = "card printed " });
+            return Ok(ApiResponse<PrintResult>.Ok(new PrintResult(true, true, productItemId, idempotencyKey)));
+        }
+
+        /// <summary>
+        /// Attempts to eject the card before reporting <paramref name="originalError"/>, matching
+        /// the pre-migration behavior exactly - including its own quirk: if the eject attempt
+        /// itself also fails, the eject failure is reported instead of the original error, not
+        /// alongside it.
+        /// </summary>
+        private async Task<IActionResult> EjectThenFailAsync(
+            string ip, string port, int hopperId, MachineError originalError, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await _machine.EjectCardAsync(ip, port, hopperId, cancellationToken);
+            }
+            catch (MachineException)
+            {
+                return Failure(MachineErrors.CannotEject());
+            }
+
+            return Failure(originalError);
         }
     }
 }

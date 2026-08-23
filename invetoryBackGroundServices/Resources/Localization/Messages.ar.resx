@@ -85,4 +85,13 @@
   <data name="Machine.BranchScopeMismatch" xml:space="preserve">
     <value>الفرع المطلوب مش مطابق لنطاق التوكن ده.</value>
   </data>
+  <data name="Machine.CannotEject" xml:space="preserve">
+    <value>الماكينة مقدرتش تطلع الكارت.</value>
+  </data>
+  <data name="Machine.BackendRejected" xml:space="preserve">
+    <value>الـ Inventory API رفض طلب الطباعة ده.</value>
+  </data>
+  <data name="Machine.BackendUnavailable" xml:space="preserve">
+    <value>مقدرناش نوصل لـ Inventory API عشان نتأكد من الكارت أو نسجل نتيجة الطباعة.</value>
+  </data>
 </root>
