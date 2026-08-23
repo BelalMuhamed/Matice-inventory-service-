@@ -338,9 +338,10 @@ namespace invetoryBackGroundServices.Controllers
 
                 // Reliability plan, Phase 7: persist what's needed to retry this confirmation
                 // later, so it survives a Printer Agent crash/restart rather than existing only in
-                // this request's memory. See OutboxReconciliationJob's doc comment for the
-                // still-open question of how a scheduled (as opposed to startup) retry
-                // authenticates once this request's own Print Agent token has expired.
+                // this request's memory. Matica Print Flow, reconciliation-credential phase: no
+                // bearer token stored here anymore - reconciliation authenticates with its own
+                // freshly-minted service token (IReconciliationTokenProvider), fetched at
+                // reconciliation time rather than reused from this request.
                 await _outbox.SaveAsync(new OutboxEntry
                 {
                     IdempotencyKey = idempotencyKey,
@@ -348,7 +349,6 @@ namespace invetoryBackGroundServices.Controllers
                     BranchId = dto.BranchId,
                     Success = printSucceeded,
                     HolderName = dto.CardHolderName.Trim(),
-                    BearerToken = GetBearerToken(),
                     CreatedAtUtc = DateTime.UtcNow
                 });
 

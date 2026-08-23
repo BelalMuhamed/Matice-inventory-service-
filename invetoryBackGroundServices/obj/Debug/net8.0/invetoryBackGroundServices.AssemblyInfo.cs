@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("invetoryBackGroundServices")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2a0a577fb1d59db125c213ac806196e5a192cf56")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8f1ed9e7d80ccd13b0c176ccecf3a5757d5fbd75")]
 [assembly: System.Reflection.AssemblyProductAttribute("invetoryBackGroundServices")]
 [assembly: System.Reflection.AssemblyTitleAttribute("invetoryBackGroundServices")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

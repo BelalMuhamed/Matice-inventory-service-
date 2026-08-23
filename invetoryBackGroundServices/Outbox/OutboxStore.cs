@@ -14,11 +14,12 @@ namespace invetoryBackGroundServices.Outbox
     /// confirm" / HTTP 207 scenario). Persisted so the outcome survives a Printer Agent crash or
     /// restart between the original attempt and eventual reconciliation.
     /// <para>
-    /// <b>Known limitation, not yet resolved - see the reconciliation job's own doc comment:</b>
-    /// <see cref="BearerToken"/> is the Print Agent token from the <em>original</em> print
-    /// attempt, and that token is short-lived (5 minutes by default) while this outbox exists
-    /// specifically to survive delays longer than a single request's retry loop. By the time a
-    /// scheduled sweep runs, it will typically already be expired.
+    /// Matica Print Flow, reconciliation-credential phase: this no longer carries a bearer token
+    /// at all. Reconciliation now authenticates with its own freshly-minted service token (see
+    /// <c>IReconciliationTokenProvider</c>), fetched once per job run rather than reused from the
+    /// original request - so there's no reason to persist the original print attempt's token here,
+    /// and removing it closes a real exposure: every pending entry used to be a plaintext file on
+    /// disk carrying a live bearer token for however long it stayed queued.
     /// </para>
     /// </summary>
     public sealed class OutboxEntry
@@ -28,7 +29,6 @@ namespace invetoryBackGroundServices.Outbox
         public long BranchId { get; set; }
         public bool Success { get; set; }
         public string? HolderName { get; set; }
-        public string BearerToken { get; set; } = string.Empty;
         public DateTime CreatedAtUtc { get; set; }
         public int AttemptCount { get; set; }
         public DateTime? LastAttemptUtc { get; set; }

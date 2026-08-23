@@ -180,13 +180,15 @@ namespace invetoryBackGroundServices
             // model the new async layer deserializes into); only the DI wiring for the four
             // request-scoped mutable-state types the legacy synchronous layer needed is gone.
 
-            // Reliability plan, Phase 7: file-based outbox + Hangfire (memory storage, per
-            // approved decision - the outbox file is already the durable part, so a persisted
-            // job store would be redundant weight for a single-machine branch service) running a
-            // 30-minute recurring sweep plus a startup scan. See OutboxReconciliationJob's doc
-            // comment for the still-open question this does not fully resolve: the token each
-            // entry carries is short-lived and will typically have expired before a *scheduled*
-            // sweep runs, though the *startup* scan has a real chance of landing in time.
+            // Reliability plan, Phase 7 + Matica Print Flow, reconciliation-credential phase:
+            // file-based outbox + Hangfire (memory storage, per approved decision - the outbox
+            // file is already the durable part, so a persisted job store would be redundant
+            // weight for a single-machine branch service) running a 30-minute recurring sweep
+            // plus a startup scan. The job authenticates each run with its own freshly-minted
+            // reconciliation service token (see IReconciliationTokenProvider below) rather than
+            // any token stored per-entry - the original design reused each entry's Print Agent
+            // token from its print attempt, which was always expired by the time a scheduled
+            // sweep ran; this closes that gap for both the scheduled sweep and the startup scan.
             builder.Services.AddOptions<OutboxOptions>()
                 .Bind(builder.Configuration.GetSection(OutboxOptions.SectionName));
             builder.Services.AddSingleton<IOutboxStore, FileOutboxStore>();
@@ -194,6 +196,21 @@ namespace invetoryBackGroundServices
 
             builder.Services.AddHangfire(config => config.UseMemoryStorage());
             builder.Services.AddHangfireServer();
+
+            // Matica Print Flow, reconciliation-credential phase: the Printer Agent's own standing
+            // credential, exchanged for a fresh access token once per reconciliation run. Same
+            // typed-HttpClient-not-per-call pattern as IPrintFlowClient, same base address (the
+            // token endpoint lives on the same Inventory API).
+            builder.Services.AddOptions<ReconciliationCredentialOptions>()
+                .Bind(builder.Configuration.GetSection(ReconciliationCredentialOptions.SectionName))
+                .Validate(o => !string.IsNullOrWhiteSpace(o.ClientId), "ReconciliationCredential ClientId is required.")
+                .Validate(o => !string.IsNullOrWhiteSpace(o.ClientSecret), "ReconciliationCredential ClientSecret is required.")
+                .ValidateOnStart();
+            builder.Services.AddHttpClient<IReconciliationTokenProvider, ReconciliationTokenProvider>((sp, client) =>
+            {
+                InventoryApiOptions options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<InventoryApiOptions>>().Value;
+                client.BaseAddress = new Uri(options.BaseUrl);
+            });
 
             // Machine communication timeout: backend configuration, not per-request data.
             builder.Services.AddOptions<MachineCommunicationOptions>()
@@ -268,7 +285,14 @@ namespace invetoryBackGroundServices
                 await startupJob.RunAsync();
             }
 
-            RecurringJob.AddOrUpdate<OutboxReconciliationJob>(
+            // The static RecurringJob.AddOrUpdate helper relies on the legacy global
+            // JobStorage.Current, which AddHangfire(...)'s DI-based registration never sets -
+            // that mismatch is exactly what "Current JobStorage instance has not been
+            // initialized yet" means. IRecurringJobManager, resolved from the same service
+            // provider AddHangfire populated, uses the storage that was actually configured
+            // instead of a global that nothing here ever assigns.
+            IRecurringJobManager recurringJobManager = app.Services.GetRequiredService<IRecurringJobManager>();
+            recurringJobManager.AddOrUpdate<OutboxReconciliationJob>(
                 "outbox-reconciliation", job => job.RunAsync(CancellationToken.None), Cron.MinuteInterval(30));
 
             await app.RunAsync();

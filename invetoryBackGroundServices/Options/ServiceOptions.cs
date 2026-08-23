@@ -56,4 +56,30 @@ namespace invetoryBackGroundServices.Options
         /// </summary>
         public string Directory { get; set; } = string.Empty;
     }
+
+    /// <summary>
+    /// The Printer Agent's own standing credential for the background outbox reconciliation job
+    /// (Matica Print Flow, reconciliation-credential phase), bound from the
+    /// <c>"ReconciliationCredential"</c> section. Exchanged for a short-lived access token via
+    /// <c>POST api/auth/service-token</c> once per reconciliation run - never reused from, and
+    /// never confused with, any user-delegated Print Agent token.
+    /// </summary>
+    public sealed class ReconciliationCredentialOptions
+    {
+        /// <summary>Configuration section name these options bind from.</summary>
+        public const string SectionName = "ReconciliationCredential";
+
+        /// <summary>
+        /// The service account's public identifier (a GUID, not a secret) - safe to keep in
+        /// <c>appsettings.json</c>, matching the Inventory API's own <c>ClientId</c> field.
+        /// </summary>
+        public string ClientId { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The service account's secret. Supplied via user-secrets (development) or an
+        /// environment variable (production); never committed to <c>appsettings.json</c>, same
+        /// convention as every other secret in this service.
+        /// </summary>
+        public string ClientSecret { get; set; } = string.Empty;
+    }
 }
