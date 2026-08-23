@@ -40,4 +40,20 @@ namespace invetoryBackGroundServices.Options
         /// </summary>
         public string[] AllowedOrigins { get; set; } = [];
     }
+
+    /// <summary>
+    /// Settings for the file-based outbox (reliability plan, Phase 7), bound from the
+    /// <c>"Outbox"</c> section.
+    /// </summary>
+    public sealed class OutboxOptions
+    {
+        /// <summary>Configuration section name these options bind from.</summary>
+        public const string SectionName = "Outbox";
+
+        /// <summary>
+        /// Directory pending outbox entries are written to. Defaults to an <c>Outbox</c> folder
+        /// next to the executable when not configured.
+        /// </summary>
+        public string Directory { get; set; } = string.Empty;
+    }
 }

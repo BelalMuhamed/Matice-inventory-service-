@@ -1,8 +1,11 @@
 
+using Hangfire;
+using Hangfire.MemoryStorage;
 using invetoryBackGroundServices.Common;
 using invetoryBackGroundServices.Machine;
 using invetoryBackGroundServices.Middleware;
 using invetoryBackGroundServices.Options;
+using invetoryBackGroundServices.Outbox;
 using invetoryBackGroundServices.Resources.Localization;
 using invetoryBackGroundServices.Security;
 using invetoryBackGroundServices.Services;
@@ -22,7 +25,7 @@ namespace invetoryBackGroundServices
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -177,6 +180,21 @@ namespace invetoryBackGroundServices
             // model the new async layer deserializes into); only the DI wiring for the four
             // request-scoped mutable-state types the legacy synchronous layer needed is gone.
 
+            // Reliability plan, Phase 7: file-based outbox + Hangfire (memory storage, per
+            // approved decision - the outbox file is already the durable part, so a persisted
+            // job store would be redundant weight for a single-machine branch service) running a
+            // 30-minute recurring sweep plus a startup scan. See OutboxReconciliationJob's doc
+            // comment for the still-open question this does not fully resolve: the token each
+            // entry carries is short-lived and will typically have expired before a *scheduled*
+            // sweep runs, though the *startup* scan has a real chance of landing in time.
+            builder.Services.AddOptions<OutboxOptions>()
+                .Bind(builder.Configuration.GetSection(OutboxOptions.SectionName));
+            builder.Services.AddSingleton<IOutboxStore, FileOutboxStore>();
+            builder.Services.AddScoped<OutboxReconciliationJob>();
+
+            builder.Services.AddHangfire(config => config.UseMemoryStorage());
+            builder.Services.AddHangfireServer();
+
             // Machine communication timeout: backend configuration, not per-request data.
             builder.Services.AddOptions<MachineCommunicationOptions>()
                 .Bind(builder.Configuration.GetSection(MachineCommunicationOptions.SectionName))
@@ -238,7 +256,22 @@ namespace invetoryBackGroundServices
             app.UseAuthorization();
             app.MapControllers();
 
-            app.Run();
+            // Reliability plan, Phase 7: run the reconciliation sweep once immediately (a crash-
+            // and-restart has a real chance of landing inside the Print Agent token's 5-minute
+            // window, unlike the scheduled sweep below), then on a recurring 30-minute schedule.
+            // Blocking here is deliberate and bounded - there is normally nothing, or very few
+            // entries, in the outbox; this is not meant to be a long-running operation.
+            using (IServiceScope startupScope = app.Services.CreateScope())
+            {
+                OutboxReconciliationJob startupJob =
+                    startupScope.ServiceProvider.GetRequiredService<OutboxReconciliationJob>();
+                await startupJob.RunAsync();
+            }
+
+            RecurringJob.AddOrUpdate<OutboxReconciliationJob>(
+                "outbox-reconciliation", job => job.RunAsync(CancellationToken.None), Cron.MinuteInterval(30));
+
+            await app.RunAsync();
         }
 
         private static void EnsureCorsOriginsConfigured(CorsPolicyOptions corsOptions)

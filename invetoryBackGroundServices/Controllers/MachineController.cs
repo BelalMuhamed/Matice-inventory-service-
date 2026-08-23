@@ -5,6 +5,7 @@ using System.Threading;
 using AUBServicesLayer.Enums;
 using invetoryBackGroundServices.Common;
 using invetoryBackGroundServices.Machine;
+using invetoryBackGroundServices.Outbox;
 using invetoryBackGroundServices.Params;
 using invetoryBackGroundServices.PrintFlow;
 using invetoryBackGroundServices.Security;
@@ -31,6 +32,7 @@ namespace invetoryBackGroundServices.Controllers
     {
         private readonly IPrintFlowClient _printFlowClient;
         private readonly IMaticaCommandClient _machine;
+        private readonly IOutboxStore _outbox;
         private readonly Logger _log;
 
         string ERROR = string.Empty;
@@ -45,10 +47,12 @@ namespace invetoryBackGroundServices.Controllers
         /// <c>ENCRYPTION.Enc_TripleDES</c> in the local batch write below, unrelated to the
         /// deleted hardware-communication layer.
         /// </summary>
-        public MachineController(IPrintFlowClient printFlowClient, IMaticaCommandClient machine, Logger log)
+        public MachineController(
+            IPrintFlowClient printFlowClient, IMaticaCommandClient machine, IOutboxStore outbox, Logger log)
         {
             _printFlowClient = printFlowClient;
             _machine = machine;
+            _outbox = outbox;
             _log = log;
         }
 
@@ -331,6 +335,22 @@ namespace invetoryBackGroundServices.Controllers
                 _log.AppendLog(
                     $"print-result could not be confirmed for item {productItemId}, idempotencyKey {idempotencyKey}: " +
                     recordResult.ErrorMessage, Logger.LogType.Error);
+
+                // Reliability plan, Phase 7: persist what's needed to retry this confirmation
+                // later, so it survives a Printer Agent crash/restart rather than existing only in
+                // this request's memory. See OutboxReconciliationJob's doc comment for the
+                // still-open question of how a scheduled (as opposed to startup) retry
+                // authenticates once this request's own Print Agent token has expired.
+                await _outbox.SaveAsync(new OutboxEntry
+                {
+                    IdempotencyKey = idempotencyKey,
+                    ProductItemId = productItemId,
+                    BranchId = dto.BranchId,
+                    Success = printSucceeded,
+                    HolderName = dto.CardHolderName.Trim(),
+                    BearerToken = GetBearerToken(),
+                    CreatedAtUtc = DateTime.UtcNow
+                });
 
                 return StatusCode(207, ApiResponse<PrintResult>.Ok(
                     new PrintResult(true, false, productItemId, idempotencyKey)));
