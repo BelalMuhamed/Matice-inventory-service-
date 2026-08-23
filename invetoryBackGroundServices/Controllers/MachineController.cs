@@ -29,43 +29,27 @@ namespace invetoryBackGroundServices.Controllers
     [Authorize(Policy = PrintAgentAuthPolicy.Name)]
     public class MachineController : ControllerBase
     {
-        private readonly MachineConnectionClass ConnectionInfo;
-        private readonly MachineInfoJSON MachineInfo;
-        private readonly ActionClass httpAction;
-        private readonly CardData Data;
         private readonly IPrintFlowClient _printFlowClient;
         private readonly IMaticaCommandClient _machine;
         private readonly Logger _log;
 
         string ERROR = string.Empty;
-        string InfoText = string.Empty;
-        MachineCommands MachineComm;
 
         /// <summary>
-        /// <paramref name="log"/> is now injected (singleton, see <see cref="Program"/>) instead of
-        /// being constructed here per request - the old per-request construction meant every
-        /// request got its own <see cref="System.Threading.Mutex"/> that never actually serialized
-        /// writes against any other request's Mutex, and re-ran the log-directory scan-and-delete
-        /// on every single call instead of once at startup (prior review, Critical finding).
-        /// <para>
-        /// <paramref name="machine"/> is the new async command client. The legacy
-        /// <see cref="MachineCommands"/> instance is still constructed here because
-        /// <see cref="Print"/> continues to use it until the print flow migrates in the next
-        /// phase - the two coexist deliberately rather than the print path being changed twice.
-        /// </para>
+        /// Legacy-cleanup phase: <c>MachineConnectionClass</c>/<c>MachineInfoJSON</c>/
+        /// <c>ActionClass</c>/<c>CardData</c>/<c>MachineCommands</c> and their DI registrations
+        /// are gone entirely - <see cref="Print"/>'s migration to <see cref="IMaticaCommandClient"/>
+        /// was their last consumer, confirmed by a repo-wide search before deletion, not assumed.
+        /// <c>InfoText</c> was dropped alongside them (no remaining reference once those fields
+        /// were removed); <see cref="ERROR"/> stays - it is still the <c>out</c> target for
+        /// <c>ENCRYPTION.Enc_TripleDES</c> in the local batch write below, unrelated to the
+        /// deleted hardware-communication layer.
         /// </summary>
-        public MachineController(
-            MachineConnectionClass connectionInfo, MachineInfoJSON machineInfo, ActionClass HttpAction,
-            CardData data, IPrintFlowClient printFlowClient, IMaticaCommandClient machine, Logger log)
+        public MachineController(IPrintFlowClient printFlowClient, IMaticaCommandClient machine, Logger log)
         {
-            this.ConnectionInfo = connectionInfo;
-            this.MachineInfo = machineInfo;
-            this.httpAction = HttpAction;
-            this.Data = data;
             _printFlowClient = printFlowClient;
             _machine = machine;
             _log = log;
-            MachineComm = new MachineCommands(HttpAction, connectionInfo, machineInfo, data, _log);
         }
 
         /// <summary>Reads the raw bearer token from this request's own Authorization header, to forward unchanged to the Inventory API.</summary>

@@ -170,10 +170,12 @@ namespace invetoryBackGroundServices
                 true,
                 true));
 
-            builder.Services.AddScoped<MachineConnectionClass>();
-            builder.Services.AddScoped<MachineInfoJSON>();
-            builder.Services.AddScoped<ActionClass>();
-            builder.Services.AddScoped<CardData>();
+            // Legacy-cleanup phase: AddScoped<MachineConnectionClass/MachineInfoJSON/ActionClass/
+            // CardData>() registrations removed - MachineController's constructor was their only
+            // consumer, and Print no longer needs them since migrating to IMaticaCommandClient.
+            // The classes MachineInfoJSON/MachineResponse/etc. still exist (they're the data
+            // model the new async layer deserializes into); only the DI wiring for the four
+            // request-scoped mutable-state types the legacy synchronous layer needed is gone.
 
             // Machine communication timeout: backend configuration, not per-request data.
             builder.Services.AddOptions<MachineCommunicationOptions>()

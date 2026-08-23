@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -57,8 +57,6 @@ namespace MATICA_S3300e.CLS
         public static Dictionary<string, string> _BankProductList { set { bankProductList = value; SendListItemPropertyChanged("ProductList"); } get { return bankProductList; } }
         #endregion
 
-
-        
         public static bool Load_sharedDirPath(out string _ERR)
         {
             try
@@ -134,51 +132,6 @@ namespace MATICA_S3300e.CLS
         private static void SendListItemPropertyChanged(string property) {
             if (ListItemChanged != null) ListItemChanged(null, new PropertyChangedEventArgs(property));
         }
-    }
-    public static class Machine_Configuration
-    {
-        #region Variables ...
-        private static string CONNTYPE = string.Empty;
-        private static string IP = string.Empty;
-        private static string PORT = string.Empty;
-        private static string HTTPACTION = string.Empty;
-
-        private static bool TIPPERSTATE = false;
-        private static int TIPTEMP = 0;
-        private static int TIPPRES = 0;
-        private static int TIPCONS = 0;
-        private static int TIPTIME = 0;
-
-        private static string MODEL = string.Empty;
-        private static string NAME = string.Empty;
-        private static string SN = string.Empty;
-        private static int FEEDERID = 0;
-        private static int HOOPERID = 0;
-        private static int REJECTID = 0;
-        private static int COUNTER = 0;
-        #endregion
-
-        #region Properties ...
-        public static string _CONNTYPE { set { CONNTYPE = value; } get { return CONNTYPE; } }
-        public static string _IP { set { IP = value; } get { return IP; } }
-        public static string _PORT { set { PORT = value; } get { return PORT; } }
-        public static string _HTTPACTION { set { HTTPACTION = value; } get { return HTTPACTION; } }
-
-        public static bool _TIPPERSTATE { set { TIPPERSTATE = value; } get { return TIPPERSTATE; } }
-        public static int _TIPTEMP { set { TIPTEMP = value; } get { return TIPTEMP; } }
-        public static int _TIPPRES { set { TIPPRES = value; } get { return TIPPRES; } }
-        public static int _TIPCONS { set { TIPCONS = value; } get { return TIPCONS; } }
-        public static int _TIPTIME { set { TIPTIME = value; } get { return TIPTIME; } }
-
-        public static string _MODEL { set { MODEL = value; } get { return MODEL; } }
-        public static string _NAME { set { NAME = value; } get { return NAME; } }
-        public static string _SN { set { SN = value; } get { return SN; } }
-        public static int _FEEDERID { set { FEEDERID = value; } get { return FEEDERID; } }
-        public static int _HOOPERID { set { HOOPERID = value; } get { return HOOPERID; } }
-        public static int _REJECTID { set { REJECTID = value; } get { return REJECTID; } }
-        public static int _COUNTER { set { COUNTER = value; } get { return COUNTER; } }
-        #endregion
-
     }
     public static class Embossing_Data
     {
