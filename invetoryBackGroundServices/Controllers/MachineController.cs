@@ -82,10 +82,14 @@ namespace invetoryBackGroundServices.Controllers
         public async Task<IActionResult> GetMachineInfo(
             GetMachineInfoReques PrintRequest, CancellationToken cancellationToken)
         {
+            // PrintRequest.Port is still validated below even though GetInfoAsync no longer takes
+            // one - GetMachineInfoReques is shared with ResetMachine, which does need a real port
+            // for its Restore command, so the field stays on the DTO and this action still
+            // validates whatever value the caller sends, it just doesn't use it for the info call.
             IActionResult? invalid = ValidateConnection(PrintRequest.Ip, PrintRequest.Port, out string ip);
             if (invalid is not null) return invalid;
 
-            MachineResponse info = await _machine.GetInfoAsync(ip, PrintRequest.Port, cancellationToken);
+            MachineResponse info = await _machine.GetInfoAsync(ip, cancellationToken);
             return Ok(ApiResponse<MachineResponse>.Ok(info));
         }
 
@@ -197,7 +201,9 @@ namespace invetoryBackGroundServices.Controllers
             // GetInfoAsync throwing here (communication failure, timeout, protocol error)
             // propagates to the exception middleware directly - nothing to eject yet, so there is
             // no recovery action to perform first, same as the previous version's behavior.
-            MachineResponse status = await _machine.GetInfoAsync(ip, dto.Port, cancellationToken);
+            // dto.Port is validated above and used by every other command in this method, but not
+            // by this one - GetInfoJson always uses the fixed MachineCommunicationOptions.InfoPort.
+            MachineResponse status = await _machine.GetInfoAsync(ip, cancellationToken);
 
             if (status.MachineStatus is null
                 || status.MachineStatus.machineStatus != "READY"

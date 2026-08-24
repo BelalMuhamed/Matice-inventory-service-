@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using invetoryBackGroundServices.Options;
 using MATICA_S3300e.LAN;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
@@ -36,8 +38,15 @@ namespace invetoryBackGroundServices.Machine
         /// Reads machine status, returning it parsed rather than as raw JSON text. Returns the
         /// full <see cref="MachineResponse"/> envelope - both <c>Machine_Configuration</c> and
         /// <c>Machine_Status</c> - since callers legitimately want either.
+        /// <para>
+        /// No <c>port</c> parameter, deliberately - unlike every other command, GetInfoJson always
+        /// uses the fixed <see cref="MachineCommunicationOptions.InfoPort"/>, never a
+        /// caller-supplied value. An earlier version of this method did take one; removing it from
+        /// the signature entirely (rather than accepting and silently ignoring it) means a caller
+        /// can't reasonably believe passing a different port here does anything.
+        /// </para>
         /// </summary>
-        Task<MachineResponse> GetInfoAsync(string ip, string port, CancellationToken cancellationToken);
+        Task<MachineResponse> GetInfoAsync(string ip, CancellationToken cancellationToken);
 
         /// <summary>Issues the Restore (reset) command.</summary>
         Task RestoreAsync(string ip, string port, CancellationToken cancellationToken);
@@ -67,20 +76,22 @@ namespace invetoryBackGroundServices.Machine
         };
 
         private readonly IMachineTransport _transport;
+        private readonly MachineCommunicationOptions _options;
 
         /// <summary>Creates the command client over the given transport.</summary>
-        public MaticaCommandClient(IMachineTransport transport) => _transport = transport;
+        public MaticaCommandClient(IMachineTransport transport, IOptions<MachineCommunicationOptions> options)
+        {
+            _transport = transport;
+            _options = options.Value;
+        }
 
         /// <inheritdoc />
-        public async Task<MachineResponse> GetInfoAsync(string ip, string port, CancellationToken cancellationToken)
+        public async Task<MachineResponse> GetInfoAsync(string ip, CancellationToken cancellationToken)
         {
-            // Approved change: this uses the caller-supplied port like every other command,
-            // rather than the port 33201 the pre-existing httpPOSTGetInfoJson hardcoded.
-            // NOTE: the earlier POC validated this request shape against the real machine on port
-            // 33201 specifically - it did not validate a different port. See the patch notes for
-            // the two-call verification to run before relying on this.
+            // Fixed port (MachineCommunicationOptions.InfoPort), never the caller's action port -
+            // see this method's own interface doc comment and InfoPort's doc comment for why.
             string body = await _transport.PostAsync(
-                ip, port, ActionPath, "{\"Command\":\"GetInfoJson\"}", cancellationToken);
+                ip, _options.InfoPort, ActionPath, "{\"Command\":\"GetInfoJson\"}", cancellationToken);
 
             MachineResponse? response;
             try

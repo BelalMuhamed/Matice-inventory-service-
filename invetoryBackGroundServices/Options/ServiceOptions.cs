@@ -21,6 +21,23 @@ namespace invetoryBackGroundServices.Options
         /// 10, matching the only timeout the pre-existing code actually set.
         /// </summary>
         public int TimeoutSeconds { get; set; } = 10;
+
+        /// <summary>
+        /// Fixed port for <c>GetInfoJson</c> ("info.json"), separate from every other command's
+        /// caller-supplied port. Defaults to the port the pre-existing (pre-async-migration) code
+        /// hardcoded for this exact call.
+        /// <para>
+        /// A dedicated configuration value with a fixed default, deliberately not a hardcoded
+        /// literal in code — every other port/timeout/URL in this service is configurable for the
+        /// same reason a magic number here would be the one inconsistent exception. It was briefly
+        /// made request-driven like every other command's port (approved decision, reconciliation-
+        /// credential phase) on the theory that the info and action ports were the same value; that
+        /// turned out to be wrong in practice — the info port must stay fixed independently of
+        /// whatever the action port is doing, including during an in-progress App Service Update,
+        /// which the shared-port behavior was actively interfering with.
+        /// </para>
+        /// </summary>
+        public string InfoPort { get; set; } = "33201";
     }
 
     /// <summary>
