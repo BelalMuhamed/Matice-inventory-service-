@@ -293,7 +293,7 @@ namespace invetoryBackGroundServices
             // instead of a global that nothing here ever assigns.
             IRecurringJobManager recurringJobManager = app.Services.GetRequiredService<IRecurringJobManager>();
             recurringJobManager.AddOrUpdate<OutboxReconciliationJob>(
-                "outbox-reconciliation", job => job.RunAsync(CancellationToken.None), Cron.MinuteInterval(30));
+                "outbox-reconciliation", job => job.RunAsync(CancellationToken.None), Cron.MinuteInterval(3));
 
             await app.RunAsync();
         }

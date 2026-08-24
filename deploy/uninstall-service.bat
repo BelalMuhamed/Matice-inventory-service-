@@ -5,12 +5,6 @@ rem ============================================================================
 rem Matica Printer Agent - Windows Service uninstall script
 rem ============================================================================
 rem Must be run from an elevated (Administrator) command prompt.
-rem
-rem Fixed here: SERVICE_NAME used to be "MyWindowsServiceApp" - see
-rem install-service.bat's own comment for why that was wrong. Also now stops
-rem the service and waits for it to actually reach STOPPED before deleting
-rem it, instead of stopping and deleting in the same breath (sc stop is
-rem asynchronous, so the previous version could race a still-running process).
 
 set SERVICE_NAME=InvetoryServices
 
@@ -24,6 +18,8 @@ if errorlevel 1 (
 echo Stopping %SERVICE_NAME% (if running)...
 sc stop %SERVICE_NAME% >nul 2>&1
 
+rem sc stop is asynchronous - give the process a moment to actually exit
+rem before deleting the service definition out from under it.
 :wait_stopped
 sc query %SERVICE_NAME% | find "STOPPED" >nul
 if errorlevel 1 (
@@ -38,5 +34,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Service removed.
+echo Service removed. Its automatic-recovery configuration (sc failure) is
+echo removed along with it - reinstalling will need install-service.bat again,
+echo not a separate recovery-configuration step.
 pause
