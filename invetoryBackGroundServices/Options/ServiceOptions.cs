@@ -72,6 +72,35 @@ namespace invetoryBackGroundServices.Options
         /// next to the executable when not configured.
         /// </summary>
         public string Directory { get; set; } = string.Empty;
+
+        /// <summary>
+        /// How often the reconciliation job runs, in minutes. Converted to a Hangfire schedule via
+        /// <c>Cron.MinuteInterval(n)</c> at startup - deliberately not a raw cron expression: the
+        /// actual need here has only ever been "how often," never a more complex schedule, and a
+        /// plain integer is trivially validated and impossible to misconfigure into an invalid
+        /// cron string. Defaults to 30, matching the value this was hardcoded to before.
+        /// </summary>
+        public int ReconciliationIntervalMinutes { get; set; } = 30;
+    }
+
+    /// <summary>
+    /// Settings for the shared AES-GCM file encryption service (used by log lines and Outbox
+    /// files alike), bound from the <c>"FileEncryption"</c> section.
+    /// </summary>
+    public sealed class FileEncryptionOptions
+    {
+        /// <summary>Configuration section name these options bind from.</summary>
+        public const string SectionName = "FileEncryption";
+
+        /// <summary>
+        /// Base64-encoded AES-256 key (32 raw bytes once decoded). Supplied via user-secrets
+        /// (development) or an environment variable (production); never committed to
+        /// <c>appsettings.json</c> - same convention as <c>PrintAgentAuth:SigningKey</c> and
+        /// <c>ReconciliationCredential:ClientSecret</c>. A dedicated key for this purpose alone,
+        /// not reused from either of those - same one-key-per-purpose reasoning applied everywhere
+        /// else in this service.
+        /// </summary>
+        public string Key { get; set; } = string.Empty;
     }
 
     /// <summary>

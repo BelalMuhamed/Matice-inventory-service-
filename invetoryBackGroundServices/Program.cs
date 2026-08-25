@@ -162,12 +162,28 @@ namespace invetoryBackGroundServices
             });
 
             // Logger fix (prior review, Critical): a single shared instance for the process, not
+            // Matica Print Flow, file-encryption phase: shared AES-GCM encryption for anything
+            // this service persists to disk that needs confidentiality - log lines and Outbox
+            // files alike, one service rather than one implementation per caller. Registered
+            // before Logger below, since Logger's own factory needs to resolve it.
+            builder.Services.AddOptions<FileEncryptionOptions>()
+                .Bind(builder.Configuration.GetSection(FileEncryptionOptions.SectionName))
+                .Validate(o => !string.IsNullOrWhiteSpace(o.Key), "FileEncryption Key is required.")
+                .Validate(o =>
+                {
+                    try { return Convert.FromBase64String(o.Key).Length == 32; }
+                    catch (FormatException) { return false; }
+                }, "FileEncryption Key must be base64-encoded and decode to exactly 32 bytes (AES-256).")
+                .ValidateOnStart();
+            builder.Services.AddSingleton<IFileEncryptionService, AesGcmFileEncryptionService>();
+
             // one constructed per request. Same constructor arguments the old per-request field
             // initializer on MachineController used - only the lifetime changes. This also fixes
             // the log-file race (the old per-request Mutex never actually serialized concurrent
             // requests against each other) and stops the log-directory scan-and-delete from
             // running on every single request instead of once at startup.
-            builder.Services.AddSingleton(_ => new Logger(
+            builder.Services.AddSingleton(sp => new Logger(
+                sp.GetRequiredService<IFileEncryptionService>(),
                 Assembly.GetExecutingAssembly().GetName().Name + "_LOG",
                 Path.Combine(AppContext.BaseDirectory, "AppLog"),
                 true,
@@ -190,7 +206,9 @@ namespace invetoryBackGroundServices
             // token from its print attempt, which was always expired by the time a scheduled
             // sweep ran; this closes that gap for both the scheduled sweep and the startup scan.
             builder.Services.AddOptions<OutboxOptions>()
-                .Bind(builder.Configuration.GetSection(OutboxOptions.SectionName));
+                .Bind(builder.Configuration.GetSection(OutboxOptions.SectionName))
+                .Validate(o => o.ReconciliationIntervalMinutes > 0, "Outbox ReconciliationIntervalMinutes must be greater than zero.")
+                .ValidateOnStart();
             builder.Services.AddSingleton<IOutboxStore, FileOutboxStore>();
             builder.Services.AddScoped<OutboxReconciliationJob>();
 
@@ -292,8 +310,11 @@ namespace invetoryBackGroundServices
             // provider AddHangfire populated, uses the storage that was actually configured
             // instead of a global that nothing here ever assigns.
             IRecurringJobManager recurringJobManager = app.Services.GetRequiredService<IRecurringJobManager>();
+            int reconciliationIntervalMinutes =
+                app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<OutboxOptions>>().Value.ReconciliationIntervalMinutes;
             recurringJobManager.AddOrUpdate<OutboxReconciliationJob>(
-                "outbox-reconciliation", job => job.RunAsync(CancellationToken.None), Cron.MinuteInterval(3));
+                "outbox-reconciliation", job => job.RunAsync(CancellationToken.None),
+                Cron.MinuteInterval(reconciliationIntervalMinutes));
 
             await app.RunAsync();
         }

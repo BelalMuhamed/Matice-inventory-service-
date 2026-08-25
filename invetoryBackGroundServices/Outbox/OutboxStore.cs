@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 using invetoryBackGroundServices.Options;
+using invetoryBackGroundServices.Security;
 using Microsoft.Extensions.Options;
 
 namespace invetoryBackGroundServices.Outbox
@@ -56,27 +58,43 @@ namespace invetoryBackGroundServices.Outbox
     /// mechanism that satisfies "survives a process restart," not a database or queue. The
     /// idempotency key is already unique per physical print attempt, so it doubles as the
     /// filename; no separate id generation needed.
+    /// <para>
+    /// Matica Print Flow, file-encryption phase: every file this store writes from now on is
+    /// AES-GCM encrypted (whole-file, not per-line like <c>Logger</c> - an Outbox entry is written
+    /// once, read once, then deleted, so there's no append-in-place concern the way there is for
+    /// a log file). <see cref="GetAllAsync"/> handles both formats on read: any file already
+    /// pending before this phase existed is plaintext JSON (confirmed - this store has never
+    /// encrypted anything before now), and forcing a one-time migration of those files wasn't
+    /// justified when simply recognizing both formats on read is smaller, safer, and achieves the
+    /// same end state organically - any entry that gets rewritten via <see cref="UpdateAsync"/>
+    /// (e.g. after a failed reconciliation attempt) is written back out encrypted from that point
+    /// on, with no explicit backfill step required.
+    /// </para>
     /// </summary>
     public sealed class FileOutboxStore : IOutboxStore
     {
         private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
         private readonly string _directory;
+        private readonly IFileEncryptionService _encryption;
 
         /// <summary>Creates the store, ensuring its backing directory exists.</summary>
-        public FileOutboxStore(IOptions<OutboxOptions> options)
+        public FileOutboxStore(IOptions<OutboxOptions> options, IFileEncryptionService encryption)
         {
             string configured = options.Value.Directory;
             _directory = string.IsNullOrWhiteSpace(configured)
                 ? Path.Combine(AppContext.BaseDirectory, "Outbox")
                 : configured;
+            _encryption = encryption;
             Directory.CreateDirectory(_directory);
         }
 
         /// <inheritdoc />
         public async Task SaveAsync(OutboxEntry entry)
         {
-            await File.WriteAllTextAsync(PathFor(entry.IdempotencyKey), JsonSerializer.Serialize(entry, JsonOptions));
+            string json = JsonSerializer.Serialize(entry, JsonOptions);
+            string encrypted = _encryption.Encrypt(json);
+            await File.WriteAllTextAsync(PathFor(entry.IdempotencyKey), encrypted);
         }
 
         /// <inheritdoc />
@@ -87,16 +105,31 @@ namespace invetoryBackGroundServices.Outbox
             {
                 try
                 {
-                    OutboxEntry? entry = JsonSerializer.Deserialize<OutboxEntry>(File.ReadAllText(file));
+                    string content = File.ReadAllText(file);
+
+                    // Backward compatibility: any file already pending before this phase existed
+                    // is plaintext JSON (this store never encrypted anything before now).
+                    // LooksEncrypted is a cheap, non-throwing shape check - it decides which path
+                    // to take, not whether the content is actually valid once decrypted/parsed.
+                    string json = _encryption.LooksEncrypted(content)
+                        ? _encryption.Decrypt(content)
+                        : content;
+
+                    OutboxEntry? entry = JsonSerializer.Deserialize<OutboxEntry>(json);
                     if (entry is not null)
                     {
                         entries.Add(entry);
                     }
                 }
-                catch (JsonException)
+                catch (Exception ex) when (
+                    ex is JsonException or FileEncryptionFormatException or CryptographicException)
                 {
-                    // A corrupt/partially-written file shouldn't take down the whole sweep -
-                    // it's left in place for manual inspection rather than silently deleted.
+                    // A corrupt, partially-written, or tampered file shouldn't take down the whole
+                    // sweep - it's left in place for manual inspection rather than silently
+                    // deleted. FileEncryptionFormatException and CryptographicException are kept
+                    // as distinct exception types by the encryption service on purpose (wrong
+                    // shape vs. right shape but failed the authentication tag check), but both get
+                    // the same treatment here: skip this one file, keep going.
                 }
             }
 

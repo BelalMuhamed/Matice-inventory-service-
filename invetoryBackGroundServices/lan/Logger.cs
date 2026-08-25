@@ -5,6 +5,7 @@
     using System.Reflection;
     using System.Text;
     using System.Threading;
+    using invetoryBackGroundServices.Security;
 
 namespace MATICA_S3300e.LAN
 {
@@ -15,6 +16,7 @@ namespace MATICA_S3300e.LAN
         private string _filePath;
         private string _fullName;
         private bool _logForDay;
+        private readonly IFileEncryptionService _encryption;
 
         private const string DBG_FileName = "DBG_AddDebugLog.txt";
 
@@ -63,16 +65,17 @@ namespace MATICA_S3300e.LAN
         #endregion
 
         #region Constructors
-        public Logger() : this(true) { }
+        public Logger(IFileEncryptionService encryption) : this(encryption, true) { }
 
-        public Logger(bool deleteOldLog)
-            : this(Assembly.GetExecutingAssembly().GetName().Name, DefaultFilePath, deleteOldLog) { }
+        public Logger(IFileEncryptionService encryption, bool deleteOldLog)
+            : this(encryption, Assembly.GetExecutingAssembly().GetName().Name, DefaultFilePath, deleteOldLog) { }
 
-        public Logger(string name, string path, bool deleteOldLog)
-            : this(name, path, deleteOldLog, true) { }
+        public Logger(IFileEncryptionService encryption, string name, string path, bool deleteOldLog)
+            : this(encryption, name, path, deleteOldLog, true) { }
 
-        public Logger(string name, string path, bool deleteOldLog, bool logForDay)
+        public Logger(IFileEncryptionService encryption, string name, string path, bool deleteOldLog, bool logForDay)
         {
+            _encryption = encryption;
             _fileName = name;
             _filePath = (path[path.Length - 1] != '\\') ? path + "\\" : path;
             _logForDay = logForDay;
@@ -98,14 +101,22 @@ namespace MATICA_S3300e.LAN
         {
             lock (objMutex)
             {
-                string ERROR = string.Empty;
                 StringBuilder sbLog = new StringBuilder();
 
                 if (type == LogType.Debug && !File.Exists(DBG_FileName)) return;
 
                 sbLog.Append(GetLogDate() + " | ");
                 sbLog.Append("[" + type.ToString() + "] >> ");
-                string cipherText = CLS.ENCRYPTION.Enc_TripleDES(out ERROR, " [Username:" + CLS.GLOBALS._loginUname + "]" + toAppend, CLS.GLOBALS._KEY_CONFIG);
+                // Matica Print Flow, file-encryption phase: AES-GCM via the shared
+                // IFileEncryptionService, replacing the old TripleDES call - fixed key and fixed
+                // all-zero IV, confirmed directly against real log files where the same ciphertext
+                // block appeared verbatim over a year apart. Every AppendLog call gets its own
+                // fresh random nonce now; see AesGcmFileEncryptionService's own doc comment for the
+                // full reasoning. The "[Username:...]" prefix from the old implementation is
+                // dropped - CLS.GLOBALS._loginUname was never actually set anywhere in this
+                // codebase (confirmed by grep before this phase), so it was always empty; not
+                // worth carrying an always-empty field into the new format.
+                string cipherText = _encryption.Encrypt(toAppend);
                 sbLog.Append(cipherText + Environment.NewLine);
 
                 File.AppendAllText(_fullName, sbLog.ToString());
