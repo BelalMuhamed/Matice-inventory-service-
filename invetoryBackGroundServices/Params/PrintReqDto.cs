@@ -15,11 +15,16 @@
     /// <see cref="OffsetY"/>) are supplied directly instead of being looked up by this service -
     /// Angular already fetches them from the Inventory API's own
     /// <c>GET /api/products/{id}/print-config</c> as part of normal product browsing.
+    /// <c>UserName</c> is gone too, for the same reason <c>token</c> is: the identifier now
+    /// recorded for the local batch line is the caller's tenant id, and that's already an
+    /// authenticated claim on the Print Agent token itself (<c>PrintAgentClaims.TenantId</c>) -
+    /// no reason to also accept it as a caller-supplied request field that could disagree with
+    /// what the token actually says, the same reasoning already applied to <see cref="BranchId"/>
+    /// via <c>IsOutsideTokenScope</c>.
     /// </summary>
     public class PrintReqDto
     {
         public required string CardHolderName { get; set; }
-        public string? UserName { get; set; }
         public required string MachineIp { get; set; }
         public required string Port { get; set; }
         public required int FeederId { get; set; }

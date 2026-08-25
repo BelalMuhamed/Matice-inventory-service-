@@ -449,10 +449,6 @@
             "type": "string",
             "nullable": true
           },
-          "userName": {
-            "type": "string",
-            "nullable": true
-          },
           "machineIp": {
             "type": "string",
             "nullable": true

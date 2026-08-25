@@ -73,6 +73,16 @@ namespace invetoryBackGroundServices.Controllers
             User.FindFirstValue(PrintAgentClaims.BranchId) != requestedBranchId.ToString();
 
         /// <summary>
+        /// The identifier recorded on the local batch line for who a card was printed under. This
+        /// used to be a caller-supplied <c>UserName</c> field on <see cref="Params.PrintReqDto"/>;
+        /// now it's the tenant id already carried on the authenticated Print Agent token, the same
+        /// authenticated-claim-over-caller-supplied-value reasoning already applied to
+        /// <see cref="IsOutsideTokenScope"/>. Never null in practice - <c>[Authorize]</c> has
+        /// already required a valid token with this claim before any action body runs.
+        /// </summary>
+        private string GetTenantId() => User.FindFirstValue(PrintAgentClaims.TenantId) ?? string.Empty;
+
+        /// <summary>
         /// Reads machine status. Returns the parsed status object inside the standard envelope
         /// rather than the machine's raw JSON text, which is what the previous version returned
         /// as a bare "message" string.
@@ -288,7 +298,7 @@ namespace invetoryBackGroundServices.Controllers
                 string lineValue = $"{maskedPan}|" +
                     $"{dto.CardHolderName.Trim()}|" +
                     $"{dto.BranchId}|" +
-                    $"{dto.UserName}|{(printSucceeded ? 1 : 3)}|" +
+                    $"{GetTenantId()}|{(printSucceeded ? 1 : 3)}|" +
                     $"{(printSucceeded ? "Print Card Success" : "Error in Print Card")}|" +
                     $"{dto.ProductId}";
                 string lineValueCipher = ENCRYPTION.Enc_TripleDES(out ERROR, lineValue, GLOBALS._KEY_CONFIG);
