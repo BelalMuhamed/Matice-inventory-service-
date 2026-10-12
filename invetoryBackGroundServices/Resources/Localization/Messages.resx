@@ -100,4 +100,85 @@
   <data name="Machine.Forbidden" xml:space="preserve">
     <value>This token is not permitted to perform this operation.</value>
   </data>
+  <data name="Evolis.Timeout" xml:space="preserve">
+    <value>The Evolis printer did not respond within the configured timeout.</value>
+  </data>
+  <data name="Evolis.Busy" xml:space="preserve">
+    <value>The Evolis printer is busy.</value>
+  </data>
+  <data name="Evolis.CommunicationFailure" xml:space="preserve">
+    <value>Could not communicate with the Evolis printer. Check that it is powered on and reachable.</value>
+  </data>
+  <data name="Evolis.CertificateError" xml:space="preserve">
+    <value>A certificate error occurred communicating with the Evolis printer.</value>
+  </data>
+  <data name="Evolis.NeedsAction" xml:space="preserve">
+    <value>The Evolis printer needs attention before it can continue.</value>
+  </data>
+  <data name="Evolis.MechanicalFailure" xml:space="preserve">
+    <value>The Evolis printer reported a mechanical fault.</value>
+  </data>
+  <data name="Evolis.FeederEmpty" xml:space="preserve">
+    <value>The card feeder is empty. Refill it and try again.</value>
+  </data>
+  <data name="Evolis.CoverOpen" xml:space="preserve">
+    <value>The printer cover is open. Close it and try again.</value>
+  </data>
+  <data name="Evolis.RibbonEnded" xml:space="preserve">
+    <value>The printer's ribbon is out or has ended. Replace it and try again.</value>
+  </data>
+  <data name="Evolis.UnsupportedRibbonFitted" xml:space="preserve">
+    <value>An unsupported ribbon is fitted in the printer.</value>
+  </data>
+  <data name="Evolis.RejectBoxFull" xml:space="preserve">
+    <value>The printer's reject box is full. Empty it and try again.</value>
+  </data>
+  <data name="Evolis.HopperFull" xml:space="preserve">
+    <value>The printer's output hopper is full. Empty it and try again.</value>
+  </data>
+  <data name="Evolis.Cooling" xml:space="preserve">
+    <value>The printer is still cooling down. Wait a moment and try again.</value>
+  </data>
+  <data name="Evolis.WaitCard" xml:space="preserve">
+    <value>The printer is waiting for a card. Check the feeder and try again.</value>
+  </data>
+  <data name="Evolis.OptionNotFitted" xml:space="preserve">
+    <value>This printer does not have the option required for this operation.</value>
+  </data>
+  <data name="Evolis.PrinterLocked" xml:space="preserve">
+    <value>The printer is locked. Unlock it and try again.</value>
+  </data>
+  <data name="Evolis.UnknownRibbon" xml:space="preserve">
+    <value>The Evolis printer's loaded ribbon is not recognized.</value>
+  </data>
+  <data name="Evolis.BlankTrack" xml:space="preserve">
+    <value>The card's magnetic track is blank.</value>
+  </data>
+  <data name="Evolis.MagneticError" xml:space="preserve">
+    <value>The Evolis printer could not read or write the card's magnetic track.</value>
+  </data>
+  <data name="Evolis.Forbidden" xml:space="preserve">
+    <value>Not authorized to perform this operation on the Evolis printer.</value>
+  </data>
+  <data name="Evolis.Cancelled" xml:space="preserve">
+    <value>The operation was cancelled.</value>
+  </data>
+  <data name="Evolis.InternalError" xml:space="preserve">
+    <value>An internal error occurred in the Evolis printer adapter.</value>
+  </data>
+  <data name="Evolis.RibbonMismatch" xml:space="preserve">
+    <value>The loaded ribbon does not match this product's configured ribbon.</value>
+  </data>
+  <data name="Evolis.RibbonCannotPrintColour" xml:space="preserve">
+    <value>This card requires a colour ribbon, but the loaded ribbon cannot print colour.</value>
+  </data>
+  <data name="Evolis.RibbonNotSelectable" xml:space="preserve">
+    <value>This product's configured ribbon cannot be selected for printing on this printer.</value>
+  </data>
+  <data name="Evolis.PrinterBusy" xml:space="preserve">
+    <value>This Evolis printer is already busy with another print job.</value>
+  </data>
+  <data name="Evolis.InvalidCardHolderName" xml:space="preserve">
+    <value>The cardholder name must contain only English letters, digits, and basic punctuation.</value>
+  </data>
 </root>

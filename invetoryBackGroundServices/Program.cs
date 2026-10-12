@@ -2,7 +2,12 @@
 using Hangfire;
 using Hangfire.MemoryStorage;
 using invetoryBackGroundServices.Common;
+using invetoryBackGroundServices.Enums;
 using invetoryBackGroundServices.Machine;
+using invetoryBackGroundServices.Machine.Abstractions;
+using invetoryBackGroundServices.Machine.Evolis;
+using invetoryBackGroundServices.Machine.Orchestration;
+using invetoryBackGroundServices.Machine.Rendering;
 using invetoryBackGroundServices.Middleware;
 using invetoryBackGroundServices.Options;
 using invetoryBackGroundServices.Outbox;
@@ -261,6 +266,67 @@ namespace invetoryBackGroundServices
                 client.BaseAddress = new Uri(options.BaseUrl);
             });
 
+            // Evolis Integration Plan, Phase 3: SDK plumbing, discovery, self-registration. No
+            // hardware-dependent validation here - every EvolisOptions field has a sensible
+            // default (confirmed against real connected hardware during this phase).
+            builder.Services.AddOptions<EvolisOptions>()
+                .Bind(builder.Configuration.GetSection(EvolisOptions.SectionName));
+
+            // Stateless and SDK-call-only - safe as singletons, same reasoning as
+            // Pbkdf2PasswordHasher's precedent in the Inventory API.
+            builder.Services.AddSingleton<EvolisConnectionFactory>();
+            builder.Services.AddSingleton<EvolisDeviceDiscovery>();
+
+            // Evolis Integration Plan, Phase 6: the GetEvent/SetEvent error-event loop. Stateless -
+            // every retry budget is a local variable its caller passes by ref, never a field here -
+            // safe as a singleton, same reasoning as the two lines above.
+            builder.Services.AddSingleton<EvolisEventHandler>();
+
+            // Keyed by UsingPrinterType, matching the Inventory API's own printer-family
+            // convention (plan §4.6) - a future Matica adapter joins this same registration under
+            // UsingPrinterType.Matica once its inline orchestration migrates (deferred, Q-27).
+            builder.Services.AddKeyedScoped<ICardPrinterAdapter, EvolisPrinterAdapter>(UsingPrinterType.Evolis);
+
+            // Evolis Integration Plan, Phase 4: SkiaSharp card rendering. Stateless - safe as a
+            // singleton, same reasoning as EvolisConnectionFactory/EvolisDeviceDiscovery above.
+            builder.Services.AddSingleton<ICardRenderer, SkiaCardRenderer>();
+
+            // Evolis Integration Plan, Phase 5: Agent-side print flow. PrinterJobGate is a
+            // singleton deliberately - its ConcurrentDictionary<string, SemaphoreSlim> is the
+            // shared state serializing jobs per device name across every request, so a
+            // scoped/per-request instance would defeat its entire purpose. The rest are stateless
+            // (PanExtractor, EvolisRibbonCompatibilityChecker, EvolisPrintSettingsMapper), same
+            // reasoning as the Phase 3/4 singletons above.
+            builder.Services.AddSingleton<IPrinterJobGate, PrinterJobGate>();
+            builder.Services.AddSingleton<IPanExtractor, PanExtractor>();
+            builder.Services.AddSingleton<EvolisRibbonCompatibilityChecker>();
+            builder.Services.AddSingleton<EvolisPrintSettingsMapper>();
+            builder.Services.AddScoped<IEvolisCardJobOrchestrator, EvolisCardJobOrchestrator>();
+
+            builder.Services.AddHttpClient<IEvolisSupervisorRegistrationClient, EvolisSupervisorRegistrationClient>((sp, client) =>
+            {
+                InventoryApiOptions options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<InventoryApiOptions>>().Value;
+                client.BaseAddress = new Uri(options.BaseUrl);
+            });
+
+            // Singleton registered once, then exposed as the IHostedService - so
+            // EvolisMachineController can call RegisterNowAsync directly on the same instance
+            // Microsoft.Extensions.Hosting drives at startup, instead of two separate instances.
+            builder.Services.AddSingleton<EvolisSupervisorRegistrar>();
+            builder.Services.AddHostedService(sp => sp.GetRequiredService<EvolisSupervisorRegistrar>());
+
+            // Native SDK trace, configured before any Evolis.* call - plan §8 acceptance
+            // criteria ("native SDK log file is produced when NativeLogPath is configured").
+            EvolisOptions evolisOptions =
+                builder.Configuration.GetSection(EvolisOptions.SectionName).Get<EvolisOptions>() ?? new EvolisOptions();
+            if (!string.IsNullOrWhiteSpace(evolisOptions.NativeLogPath))
+            {
+                Evolis.Evolis.SetLogPath(evolisOptions.NativeLogPath);
+            }
+            if (Enum.TryParse(evolisOptions.NativeLogLevel, ignoreCase: true, out Evolis.LogLevel nativeLogLevel))
+            {
+                Evolis.Evolis.SetLogLevel(nativeLogLevel);
+            }
 
             builder.WebHost.UseUrls("http://localhost:8403");
 

@@ -5,6 +5,9 @@ using System.Threading;
 using AUBServicesLayer.Enums;
 using invetoryBackGroundServices.Common;
 using invetoryBackGroundServices.Machine;
+using invetoryBackGroundServices.Machine.Abstractions;
+using invetoryBackGroundServices.Machine.Evolis;
+using invetoryBackGroundServices.Machine.Orchestration;
 using invetoryBackGroundServices.Outbox;
 using invetoryBackGroundServices.Params;
 using invetoryBackGroundServices.PrintFlow;
@@ -34,6 +37,7 @@ namespace invetoryBackGroundServices.Controllers
         private readonly IMaticaCommandClient _machine;
         private readonly IOutboxStore _outbox;
         private readonly Logger _log;
+        private readonly IEvolisCardJobOrchestrator _evolisOrchestrator;
 
         string ERROR = string.Empty;
 
@@ -48,12 +52,14 @@ namespace invetoryBackGroundServices.Controllers
         /// deleted hardware-communication layer.
         /// </summary>
         public MachineController(
-            IPrintFlowClient printFlowClient, IMaticaCommandClient machine, IOutboxStore outbox, Logger log)
+            IPrintFlowClient printFlowClient, IMaticaCommandClient machine, IOutboxStore outbox, Logger log,
+            IEvolisCardJobOrchestrator evolisOrchestrator)
         {
             _printFlowClient = printFlowClient;
             _machine = machine;
             _outbox = outbox;
             _log = log;
+            _evolisOrchestrator = evolisOrchestrator;
         }
 
         /// <summary>Reads the raw bearer token from this request's own Authorization header, to forward unchanged to the Inventory API.</summary>
@@ -373,6 +379,42 @@ namespace invetoryBackGroundServices.Controllers
             }
 
             return Ok(ApiResponse<PrintResult>.Ok(new PrintResult(true, true, productItemId, idempotencyKey)));
+        }
+
+        /// <summary>
+        /// Evolis Integration Plan §10, decisions Q-26/Q-27: the Evolis counterpart to
+        /// <see cref="Print"/>. Builds the vendor-neutral <see cref="CardJob"/> from the
+        /// Evolis-shaped request and hands everything else to <see cref="IEvolisCardJobOrchestrator"/>
+        /// — this action owns branch-scope validation and HTTP response shaping only, exactly the
+        /// same division of responsibility <see cref="Print"/> has with <see cref="IMaticaCommandClient"/>.
+        /// An <see cref="EvolisException"/> thrown by the orchestrator propagates to
+        /// <see cref="Middleware.GlobalExceptionMiddleware"/> unchanged, same as every other
+        /// <c>MachineException</c> in this controller.
+        /// </summary>
+        [HttpPost("Print-Card-Holder-Name-Evolis")]
+        [ProducesResponseType(typeof(ApiResponse<PrintResult>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<PrintResult>), 207)]
+        public async Task<IActionResult> PrintEvolis([FromBody] EvolisPrintReqDto dto, CancellationToken cancellationToken)
+        {
+            if (IsOutsideTokenScope(dto.BranchId))
+            {
+                return Forbid();
+            }
+
+            var job = new CardJob(
+                dto.DeviceName, dto.CardHolderName.Trim(), dto.ProductId, dto.BranchId,
+                dto.RibbonTypeId, dto.RibbonSdkCode, dto.InputTray, dto.OutputTray, dto.ErrorTray,
+                dto.MagCoercivity, dto.PrintWay, dto.PrintedFace, dto.X, dto.Y, dto.FontFamily,
+                dto.FontSize, dto.PrintColor, dto.BackgroundColor, dto.FontStyle);
+
+            CardJobResult result = await _evolisOrchestrator.RunAsync(job, GetTenantId(), GetBearerToken(), cancellationToken);
+
+            var printResult = new PrintResult(
+                result.Printed, result.ResultConfirmedWithBackend, result.ProductItemId ?? 0, result.IdempotencyKey ?? string.Empty);
+
+            return result.ResultConfirmedWithBackend
+                ? Ok(ApiResponse<PrintResult>.Ok(printResult))
+                : StatusCode(207, ApiResponse<PrintResult>.Ok(printResult));
         }
 
         /// <summary>

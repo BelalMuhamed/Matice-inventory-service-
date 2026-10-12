@@ -100,4 +100,85 @@
   <data name="Machine.Forbidden" xml:space="preserve">
     <value>التوكن ده مش مسموح له يعمل العملية دي.</value>
   </data>
+  <data name="Evolis.Timeout" xml:space="preserve">
+    <value>طابعة الإيفوليس مردتش في الوقت المحدد.</value>
+  </data>
+  <data name="Evolis.Busy" xml:space="preserve">
+    <value>طابعة الإيفوليس مشغولة دلوقتي.</value>
+  </data>
+  <data name="Evolis.CommunicationFailure" xml:space="preserve">
+    <value>مقدرناش نتصل بطابعة الإيفوليس. اتأكد إنها شغالة وموصولة.</value>
+  </data>
+  <data name="Evolis.CertificateError" xml:space="preserve">
+    <value>حصل خطأ في الشهادة وقت الاتصال بطابعة الإيفوليس.</value>
+  </data>
+  <data name="Evolis.NeedsAction" xml:space="preserve">
+    <value>طابعة الإيفوليس محتاجة تدخّل قبل ما تكمّل.</value>
+  </data>
+  <data name="Evolis.MechanicalFailure" xml:space="preserve">
+    <value>طابعة الإيفوليس فيها عطل ميكانيكي.</value>
+  </data>
+  <data name="Evolis.FeederEmpty" xml:space="preserve">
+    <value>الفيدر فاضي من الكروت. ارفع الكروت وحاول تاني.</value>
+  </data>
+  <data name="Evolis.CoverOpen" xml:space="preserve">
+    <value>غطا الطابعة مفتوح. اقفله وحاول تاني.</value>
+  </data>
+  <data name="Evolis.RibbonEnded" xml:space="preserve">
+    <value>شريط الطابعة خلص أو خرج. غيّره وحاول تاني.</value>
+  </data>
+  <data name="Evolis.UnsupportedRibbonFitted" xml:space="preserve">
+    <value>الشريط المحمّل في الطابعة غير مدعوم.</value>
+  </data>
+  <data name="Evolis.RejectBoxFull" xml:space="preserve">
+    <value>صندوق الرفض في الطابعة فل. فضّيه وحاول تاني.</value>
+  </data>
+  <data name="Evolis.HopperFull" xml:space="preserve">
+    <value>حاوية الخروج في الطابعة فل. فضّيها وحاول تاني.</value>
+  </data>
+  <data name="Evolis.Cooling" xml:space="preserve">
+    <value>الطابعة لسه بتبرد. استنى شوية وحاول تاني.</value>
+  </data>
+  <data name="Evolis.WaitCard" xml:space="preserve">
+    <value>الطابعة مستنية كارت. راجع الفيدر وحاول تاني.</value>
+  </data>
+  <data name="Evolis.OptionNotFitted" xml:space="preserve">
+    <value>الطابعة دي معندها الخاصية المطلوبة للعملية دي.</value>
+  </data>
+  <data name="Evolis.PrinterLocked" xml:space="preserve">
+    <value>الطابعة مقفولة. افتحها وحاول تاني.</value>
+  </data>
+  <data name="Evolis.UnknownRibbon" xml:space="preserve">
+    <value>الشريط المحمّل في طابعة الإيفوليس غير معروف.</value>
+  </data>
+  <data name="Evolis.BlankTrack" xml:space="preserve">
+    <value>الشريط المغناطيسي للكارت فاضي.</value>
+  </data>
+  <data name="Evolis.MagneticError" xml:space="preserve">
+    <value>طابعة الإيفوليس مقدرتش تقرا أو تكتب الشريط المغناطيسي للكارت.</value>
+  </data>
+  <data name="Evolis.Forbidden" xml:space="preserve">
+    <value>مش مسموح تعمل العملية دي على طابعة الإيفوليس.</value>
+  </data>
+  <data name="Evolis.Cancelled" xml:space="preserve">
+    <value>تم إلغاء العملية.</value>
+  </data>
+  <data name="Evolis.InternalError" xml:space="preserve">
+    <value>حصل خطأ داخلي في Evolis adapter.</value>
+  </data>
+  <data name="Evolis.RibbonMismatch" xml:space="preserve">
+    <value>الشريط المحمّل مش هو الشريط المظبوط للمنتج ده.</value>
+  </data>
+  <data name="Evolis.RibbonCannotPrintColour" xml:space="preserve">
+    <value>الكارت ده محتاج شريط ألوان، والشريط المحمّل مايقدرش يطبع ألوان.</value>
+  </data>
+  <data name="Evolis.RibbonNotSelectable" xml:space="preserve">
+    <value>الشريط المظبوط للمنتج ده مايقدرش يتحدد للطباعة على الطابعة دي.</value>
+  </data>
+  <data name="Evolis.PrinterBusy" xml:space="preserve">
+    <value>طابعة الإيفوليس دي مشغولة بعملية طباعة تانية دلوقتي.</value>
+  </data>
+  <data name="Evolis.InvalidCardHolderName" xml:space="preserve">
+    <value>اسم حامل الكارت لازم يكون حروف إنجليزي وأرقام وعلامات ترقيم بسيطة بس.</value>
+  </data>
 </root>

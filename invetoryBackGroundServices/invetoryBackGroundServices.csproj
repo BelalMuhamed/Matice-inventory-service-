@@ -5,9 +5,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>992845dd-fc8c-46e5-80cb-e9d20d95a1fe</UserSecretsId>
+    <!-- Pinned x64 (Evolis Integration Plan Phase 3): makes the native evolis.dll probe
+         unambiguous inside a service host, which otherwise runs AnyCPU. -->
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Evolis.SDK" Version="9.4.1" />
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.8" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.14" />
     <PackageReference Include="Hangfire.MemoryStorage" Version="1.8.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.27" />
